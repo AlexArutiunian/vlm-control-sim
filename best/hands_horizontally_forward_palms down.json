@@ -1,0 +1,23 @@
+[
+
+
+{
+"frame": [
+{"name": "left_shoulder_pitch", "angle": -88},
+{"name": "left_shoulder_roll", "angle": 20},
+{"name": "left_shoulder_yaw", "angle": -20},
+{"name": "left_elbow", "angle": 90},
+
+
+
+  {"name": "right_shoulder_pitch", "angle": -88},
+  {"name": "right_shoulder_roll", "angle": -20},
+  {"name": "right_shoulder_yaw", "angle": 20},
+  {"name": "right_elbow", "angle": 90}
+
+],
+"duration": 0.6
+
+
+}
+]

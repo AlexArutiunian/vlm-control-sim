@@ -1,0 +1,458 @@
+[
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -40
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 30
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -40
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 30
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      },
+      {
+        "name": "joint_l_thumb_proximal_1",
+        "angle": 30
+      },
+      {
+        "name": "joint_l_thumb_proximal_2",
+        "angle": 20
+      },
+      {
+        "name": "joint_l_thumb_middle",
+        "angle": 18
+      },
+      {
+        "name": "joint_l_thumb_distal",
+        "angle": 22
+      },
+      {
+        "name": "joint_l_index_proximal",
+        "angle": 70
+      },
+      {
+        "name": "joint_l_index_distal",
+        "angle": 85
+      },
+      {
+        "name": "joint_l_middle_proximal",
+        "angle": 75
+      },
+      {
+        "name": "joint_l_middle_distal",
+        "angle": 90
+      },
+      {
+        "name": "joint_l_ring_proximal",
+        "angle": 70
+      },
+      {
+        "name": "joint_l_ring_distal",
+        "angle": 85
+      },
+      {
+        "name": "joint_l_pinky_proximal",
+        "angle": 65
+      },
+      {
+        "name": "joint_l_pinky_distal",
+        "angle": 90
+      },
+      {
+        "name": "joint_r_thumb_proximal_1",
+        "angle": 30
+      },
+      {
+        "name": "joint_r_thumb_proximal_2",
+        "angle": 20
+      },
+      {
+        "name": "joint_r_thumb_middle",
+        "angle": 18
+      },
+      {
+        "name": "joint_r_thumb_distal",
+        "angle": 22
+      },
+      {
+        "name": "joint_r_index_proximal",
+        "angle": 70
+      },
+      {
+        "name": "joint_r_index_distal",
+        "angle": 85
+      },
+      {
+        "name": "joint_r_middle_proximal",
+        "angle": 75
+      },
+      {
+        "name": "joint_r_middle_distal",
+        "angle": 90
+      },
+      {
+        "name": "joint_r_ring_proximal",
+        "angle": 70
+      },
+      {
+        "name": "joint_r_ring_distal",
+        "angle": 85
+      },
+      {
+        "name": "joint_r_pinky_proximal",
+        "angle": 65
+      },
+      {
+        "name": "joint_r_pinky_distal",
+        "angle": 90
+      }
+    ],
+    "duration": 0.4
+  },
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -35
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 25
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -85
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 70
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      }
+    ],
+    "duration": 0.25
+  },
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -35
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 20
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -120
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 90
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      }
+    ],
+    "duration": 0.3
+  },
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -85
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 70
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -70
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 40
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      }
+    ],
+    "duration": 0.28
+  },
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -120
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 90
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -35
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 15
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      }
+    ],
+    "duration": 0.3
+  },
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -70
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 40
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -85
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 70
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      }
+    ],
+    "duration": 0.28
+  },
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -35
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 15
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -120
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 90
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      }
+    ],
+    "duration": 0.3
+  },
+  {
+    "frame": [
+      {
+        "name": "left_shoulder_pitch",
+        "angle": -40
+      },
+      {
+        "name": "left_shoulder_roll",
+        "angle": 30
+      },
+      {
+        "name": "left_shoulder_yaw",
+        "angle": 15
+      },
+      {
+        "name": "left_elbow",
+        "angle": 30
+      },
+      {
+        "name": "left_hand",
+        "angle": -30
+      },
+      {
+        "name": "right_shoulder_pitch",
+        "angle": -40
+      },
+      {
+        "name": "right_shoulder_roll",
+        "angle": 19.0
+      },
+      {
+        "name": "right_shoulder_yaw",
+        "angle": -15
+      },
+      {
+        "name": "right_elbow",
+        "angle": 30
+      },
+      {
+        "name": "right_hand",
+        "angle": 30
+      }
+    ],
+    "duration": 0.35
+  }
+]

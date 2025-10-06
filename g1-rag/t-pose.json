@@ -1,0 +1,11 @@
+[
+{
+"frame": [
+{"name": "left_shoulder_roll_joint", "angle": 90},
+{"name": "right_shoulder_roll_joint", "angle": -90},
+{"name": "left_elbow_joint", "angle": 90},
+{"name": "right_elbow_joint", "angle": 90}
+],
+"duration": 1
+}
+]

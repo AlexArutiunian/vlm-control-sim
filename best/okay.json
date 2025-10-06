@@ -1,0 +1,49 @@
+[
+{
+"parallel": [
+{"robot": "r1", "name": "turn", "deg": -90, "spd_deg_s": 60},
+{"robot": "r2", "name": "turn", "deg": 90, "spd_deg_s": 60}
+]
+},
+{
+"frame": [
+{"name": "r1_right_shoulder_pitch", "angle": -90},
+{"name": "r1_right_shoulder_roll", "angle": -45},
+{"name": "r1_right_elbow", "angle": 50}],
+"duration": 1.4
+},
+{
+"repeat": [
+{"frame": [{"name": "r1_right_shoulder_yaw", "angle": 10}], "duration": 0.6},
+{"frame": [{"name": "r1_right_shoulder_yaw", "angle": -10}], "duration": 0.6}
+],
+"times": 5
+},
+
+{
+"frame": [
+{"name": "r2_right_shoulder_pitch", "angle": -80},
+{"name": "r2_right_shoulder_roll", "angle": -40},
+{"name": "r2_right_shoulder_yaw", "angle": -15},
+{"name": "r2_right_elbow", "angle": 10},
+
+  {"name": "r2_joint_r_index_proximal",   "angle": 55},
+  {"name": "r2_joint_r_index_distal",     "angle": 50},
+
+  {"name": "r2_joint_r_thumb_proximal_1", "angle": 45},
+  {"name": "r2_joint_r_thumb_proximal_2", "angle": 18},
+  {"name": "r2_joint_r_thumb_middle",     "angle": 28},
+  {"name": "r2_joint_r_thumb_distal",     "angle": 22},
+
+  {"name": "r2_joint_r_middle_proximal",  "angle": 15},
+  {"name": "r2_joint_r_middle_distal",    "angle": 10},
+  {"name": "r2_joint_r_ring_proximal",    "angle": 15},
+  {"name": "r2_joint_r_ring_distal",      "angle": 10},
+  {"name": "r2_joint_r_pinky_proximal",   "angle": 15},
+  {"name": "r2_joint_r_pinky_distal",     "angle": 10}
+],
+"duration": 1.0
+
+
+}
+]

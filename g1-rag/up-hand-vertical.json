@@ -1,0 +1,9 @@
+[
+{
+"frame": [
+{"name": "right_shoulder_pitch_joint", "angle": -185},
+{"name": "right_elbow_joint", "angle": 90}
+],
+"duration": 1
+}
+]

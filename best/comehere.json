@@ -1,0 +1,96 @@
+[
+{
+"frame": [
+{"name": "left_shoulder_pitch", "angle": -38},
+{"name": "left_shoulder_roll", "angle": 12},
+{"name": "left_shoulder_yaw", "angle": -10},
+{"name": "left_elbow", "angle": 28},
+{"name": "left_hand", "angle": -85},
+
+  {"name": "joint_l_thumb_proximal_1", "angle": 14},
+  {"name": "joint_l_thumb_proximal_2", "angle": 10},
+  {"name": "joint_l_thumb_middle", "angle": 8},
+  {"name": "joint_l_thumb_distal", "angle": 8},
+
+  {"name": "joint_l_index_proximal", "angle": 22},
+  {"name": "joint_l_index_distal", "angle": 32},
+  {"name": "joint_l_middle_proximal", "angle": 24},
+  {"name": "joint_l_middle_distal", "angle": 34},
+  {"name": "joint_l_ring_proximal", "angle": 22},
+  {"name": "joint_l_ring_distal", "angle": 32},
+  {"name": "joint_l_pinky_proximal", "angle": 20},
+  {"name": "joint_l_pinky_distal", "angle": 30}
+],
+"duration": 0.32
+
+
+},
+{
+"repeat": [
+{
+"frame": [
+{"name": "left_hand", "angle": -88},
+
+      {"name": "joint_l_index_proximal", "angle": 84},
+      {"name": "joint_l_index_distal", "angle": 100},
+      {"name": "joint_l_middle_proximal", "angle": 78},
+      {"name": "joint_l_middle_distal", "angle": 96},
+      {"name": "joint_l_ring_proximal", "angle": 74},
+      {"name": "joint_l_ring_distal", "angle": 90},
+      {"name": "joint_l_pinky_proximal", "angle": 70},
+      {"name": "joint_l_pinky_distal", "angle": 96},
+
+      {"name": "joint_l_thumb_proximal_1", "angle": 18},
+      {"name": "joint_l_thumb_proximal_2", "angle": 14},
+      {"name": "joint_l_thumb_middle", "angle": 12},
+      {"name": "joint_l_thumb_distal", "angle": 12}
+    ],
+    "duration": 0.18
+  },
+  {
+    "frame": [
+      {"name": "left_hand", "angle": -82},
+
+      {"name": "joint_l_index_proximal", "angle": 24},
+      {"name": "joint_l_index_distal", "angle": 34},
+      {"name": "joint_l_middle_proximal", "angle": 26},
+      {"name": "joint_l_middle_distal", "angle": 36},
+      {"name": "joint_l_ring_proximal", "angle": 24},
+      {"name": "joint_l_ring_distal", "angle": 34},
+      {"name": "joint_l_pinky_proximal", "angle": 22},
+      {"name": "joint_l_pinky_distal", "angle": 32},
+
+      {"name": "joint_l_thumb_proximal_1", "angle": 14},
+      {"name": "joint_l_thumb_proximal_2", "angle": 10},
+      {"name": "joint_l_thumb_middle", "angle": 8},
+      {"name": "joint_l_thumb_distal", "angle": 8}
+    ],
+    "duration": 0.16
+  }
+],
+"times": 4
+
+
+},
+{
+"frame": [
+{"name": "left_hand", "angle": -85},
+
+  {"name": "joint_l_index_proximal", "angle": 24},
+  {"name": "joint_l_index_distal", "angle": 34},
+  {"name": "joint_l_middle_proximal", "angle": 26},
+  {"name": "joint_l_middle_distal", "angle": 36},
+  {"name": "joint_l_ring_proximal", "angle": 24},
+  {"name": "joint_l_ring_distal", "angle": 34},
+  {"name": "joint_l_pinky_proximal", "angle": 22},
+  {"name": "joint_l_pinky_distal", "angle": 32},
+  {"name": "joint_l_thumb_proximal_1", "angle": 14},
+  {"name": "joint_l_thumb_proximal_2", "angle": 10},
+  {"name": "joint_l_thumb_middle", "angle": 8},
+  {"name": "joint_l_thumb_distal", "angle": 8}
+],
+"duration": 0.5
+
+
+}
+]

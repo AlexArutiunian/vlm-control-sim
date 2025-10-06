@@ -1,0 +1,7 @@
+[
+{"frame": [{"name": "left_shoulder_yaw_joint", "angle": -12}, {"name": "right_shoulder_yaw_joint", "angle": 12}], "duration": 0.5},
+{"frame": [{"name": "left_shoulder_pitch_joint", "angle": -10}, {"name": "right_shoulder_pitch_joint", "angle": -10}], "duration": 0.5},
+{"frame": [{"name": "left_shoulder_yaw_joint", "angle": -12}, {"name": "right_shoulder_yaw_joint", "angle": 12}], "duration": 5},
+{"frame": [{"name": "left_shoulder_pitch_joint", "angle": -10}, {"name": "right_shoulder_pitch_joint", "angle": -10}], "duration": 5},
+{"frame": [{"name": "left_shoulder_yaw_joint", "angle": 0}, {"name": "right_shoulder_yaw_joint", "angle": 0}, {"name": "left_shoulder_pitch_joint", "angle": 0}, {"name": "right_shoulder_pitch_joint", "angle": 0}], "duration": 0.6}
+]
