@@ -8,7 +8,7 @@ wheels/
 
 # secret data (api keys)
 
-secrets.py
+secrets_keys.py
 
 # Virtual environments
 .venv

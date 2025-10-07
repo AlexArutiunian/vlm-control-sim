@@ -823,7 +823,7 @@ def ensure_initialized():
         return
 
     # ---- file paths (as in __main__) ----
-    name_ = "g1"
+   
     config_file = f"unitree_rl_gym/deploy/deploy_mujoco/configs/{name_}.yaml"
     policy_path = f"unitree_rl_gym/deploy/pre_train/{name_}/motion.pt"
     #xml_path = f"unitree_rl_gym/resources/robots/{name_}/scene.xml"

@@ -1,5 +1,5 @@
 import os
-from secrets import OPENAI_KEY
+from secrets_keys import OPENAI_KEY
 # --- OpenAI ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", OPENAI_KEY)
 OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-5")

@@ -28,3 +28,108 @@
 {"name": "walk", "dir_deg": 180, "spd": 0.6, "num": 3},
 {"name": "turn", "deg": 60}
 ]
+
+[ {"frame": [{"name": "left_shoulder_yaw_joint", "angle": -15}, {"name": "right_shoulder_yaw_joint", "angle": 15}], "duration": 0.5}, {"frame": [{"name": "left_shoulder_pitch_joint", "angle": -25}, {"name": "right_shoulder_pitch_joint", "angle": -25}], "duration": 0.5}, {"name": "walk", "dir_deg": 180, "spd": 0.6, "num": 6}, {"name": "turn", "deg": -100}, {"name": "walk", "dir_deg": 0, "spd": 0.4, "num": 2}, {"frame": [{"name": "left_shoulder_yaw_joint", "angle": 0}, {"name": "right_shoulder_yaw_joint", "angle": 0}, {"name": "left_shoulder_pitch_joint", "angle": 0}, {"name": "right_shoulder_pitch_joint", "angle": 0}], "duration": 0.6}, {"name": "walk", "dir_deg": 180, "spd": 0.6, "num": 3}, {"name": "turn", "deg": 60} ]
+
+[
+  {
+    "frame": [
+        {"name": "left_shoulder_pitch_joint", "angle": 30},
+        {"name": "right_shoulder_pitch_joint", "angle": 30},
+      {"name": "left_shoulder_yaw_joint", "angle": -15},
+      {"name": "right_shoulder_yaw_joint", "angle": 15}
+    ],
+    "duration": 0.5
+  },
+  {
+    "frame": [
+      {"name": "left_shoulder_pitch_joint", "angle": -30},
+      {"name": "right_shoulder_pitch_joint", "angle": -30},
+      {"name": "left_wrist_pitch_joint", "angle": -10},
+      {"name": "right_wrist_pitch_joint", "angle": -10}
+    ],
+    "duration": 0.6
+  },
+  {"name": "walk", "dir_deg": 180, "spd": 0.6, "num": 6},
+
+  {"name": "walk", "dir_deg": 0, "spd": 0.4, "num": 2},
+
+  {"name": "walk", "dir_deg": 90, "spd": 0.3, "num": 1},
+
+  {
+    "frame": [
+      {"name": "left_shoulder_pitch_joint", "angle": -45},
+      {"name": "right_shoulder_pitch_joint", "angle": -45},
+      {"name": "left_wrist_pitch_joint", "angle": -20},
+      {"name": "right_wrist_pitch_joint", "angle": -20}
+    ],
+    "duration": 0.8
+  },
+  {
+    "frame": [
+      {"name": "left_shoulder_yaw_joint", "angle": 0},
+      {"name": "right_shoulder_yaw_joint", "angle": 0},
+      {"name": "left_shoulder_pitch_joint", "angle": 0},
+      {"name": "right_shoulder_pitch_joint", "angle": 0},
+      {"name": "left_wrist_pitch_joint", "angle": 0},
+      {"name": "right_wrist_pitch_joint", "angle": 0}
+    ],
+    "duration": 0.6
+  }
+]
+
+
+[
+  {
+    "frame": [
+        {"name": "left_shoulder_pitch_joint", "angle": 10},
+        {"name": "right_shoulder_pitch_joint", "angle": 10},
+      {"name": "left_shoulder_yaw_joint", "angle": -15},
+      {"name": "right_shoulder_yaw_joint", "angle": 15}
+    ],
+    "duration": 0.5
+  },
+  
+
+
+
+  {
+    "frame": [
+      {"name": "left_shoulder_pitch_joint", "angle": -45},
+      {"name": "right_shoulder_pitch_joint", "angle": -45},
+      {"name": "left_wrist_pitch_joint", "angle": -20},
+      {"name": "right_wrist_pitch_joint", "angle": -20}
+    ],
+    "duration": 1
+  },
+  {
+    "frame": [
+      {"name": "left_shoulder_yaw_joint", "angle": 10},
+      {"name": "right_shoulder_yaw_joint", "angle": 10},
+      {"name": "left_shoulder_pitch_joint", "angle": 0},
+      {"name": "right_shoulder_pitch_joint", "angle": 0},
+      {"name": "left_shoulder_yaw_joint", "angle": -15},
+      {"name": "right_shoulder_yaw_joint", "angle": 15},
+            {"name": "left_wrist_pitch_joint", "angle": 10},
+      {"name": "right_wrist_pitch_joint", "angle": 10}
+    ],
+    "duration": 1
+  },
+  {
+    "frame": [
+      {"name": "left_shoulder_yaw_joint", "angle": 0},
+      {"name": "right_shoulder_yaw_joint", "angle": 0},
+      {"name": "left_shoulder_pitch_joint", "angle": 0},
+      {"name": "right_shoulder_pitch_joint", "angle": 0},
+      {"name": "left_shoulder_yaw_joint", "angle": 0},
+      {"name": "right_shoulder_yaw_joint", "angle": 0},
+            {"name": "left_wrist_pitch_joint", "angle": 0},
+      {"name": "right_wrist_pitch_joint", "angle": 0}
+    ],
+    "duration": 1
+  },
+  {"name": "walk", "dir_deg": 180, "spd": 0.6, "num": 2}
+]
+
+
+
