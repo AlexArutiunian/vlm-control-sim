@@ -29,6 +29,8 @@ VLM возвращает json массив с джоинтами и значен
 
 ## Examples
 
-![alt text](recorded/h1_2.gif)
-![alt text](recorded/h1_2-2.gif)
-![alt text](recorded/g1.gif)
+![alt text](recorded/h1_2_hold_white.gif)
+![alt text](recorded/h1_2_hold_white_2nd_view.gif)
+![alt text](recorded/g1_replace_sphere.gif)
+![alt text](recorded/red_box_wide.gif)
+![alt text](recorded/hello3x.gif)
