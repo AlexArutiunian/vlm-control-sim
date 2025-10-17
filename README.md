@@ -33,4 +33,6 @@ VLM возвращает json массив с джоинтами и значен
 ![alt text](recorded/h1_2_hold_white_2nd_view.gif)
 ![alt text](recorded/g1_replace_sphere.gif)
 ![alt text](recorded/red_box_wide.gif)
-![alt text](recorded/hello3x.gif)
+<p align="center">
+  <img src="recorded/hello3x.gif" alt="alt text">
+</p>
