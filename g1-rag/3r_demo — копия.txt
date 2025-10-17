@@ -1,0 +1,245 @@
+[
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_pitch_joint", "angle": 12 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": 12 }
+        ],
+        "duration": 0.1
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_pitch_joint", "angle": 12 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": 12 }
+        ],
+        "duration": 0.1
+      }
+    ]
+  },
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": -16 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 16 }
+        ],
+        "duration": 0.1
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_yaw_joint", "angle": -16 },
+          { "name": "r2_right_shoulder_yaw_joint", "angle": 16 }
+        ],
+        "duration": 0.1
+      }
+    ]
+  },
+{
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_pitch_joint", "angle": -12 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": -12 }
+        ],
+        "duration": 0.1
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_pitch_joint", "angle": -12 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": -12 }
+        ],
+        "duration": 0.1
+      }
+    ]
+  },
+
+
+  {
+    "parallel": [
+      { "name": "walk", "robot": "r1", "dir_deg": 90,  "spd": 0.6, "num": 2 },
+      { "name": "walk", "robot": "r2", "dir_deg": -90, "spd": 0.6, "num": 2 }
+    ]
+  },
+
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r1_left_shoulder_pitch_joint", "angle": 0 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": 0 }
+        ],
+        "duration": 0.6
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r2_right_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r2_left_shoulder_pitch_joint", "angle": 0 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": 0 }
+        ],
+        "duration": 0.6
+      }
+    ]
+  }
+]
+
+
+
+[
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_pitch_joint", "angle": 12 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": 12 }
+        ],
+        "duration": 0.5
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_pitch_joint", "angle": 12 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": 12 }
+        ],
+        "duration": 0.5
+      }
+    ]
+  },
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": -16 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 16 }
+        ],
+        "duration": 0.5
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_yaw_joint", "angle": -16 },
+          { "name": "r2_right_shoulder_yaw_joint", "angle": 16 }
+        ],
+        "duration": 0.5
+      }
+    ]
+  },
+{
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_pitch_joint", "angle": -12 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": -12 }
+        ],
+        "duration": 0.5
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_pitch_joint", "angle": -12 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": -12 }
+        ],
+        "duration": 0.5
+      }
+    ]
+  },
+
+
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_pitch_joint", "angle": 12 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": 12 }
+        ],
+        "duration": 5
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_pitch_joint", "angle": 12 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": 12 }
+        ],
+        "duration": 5
+      }
+    ]
+  },
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": -16 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 16 }
+        ],
+        "duration": 5
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_yaw_joint", "angle": -16 },
+          { "name": "r2_right_shoulder_yaw_joint", "angle": 16 }
+        ],
+        "duration": 5
+      }
+    ]
+  },
+{
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_pitch_joint", "angle": -12 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": -12 }
+        ],
+        "duration": 5
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_pitch_joint", "angle": -12 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": -12 }
+        ],
+        "duration": 5
+      }
+    ]
+  },
+  {
+    "parallel": [
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r1_left_shoulder_pitch_joint", "angle": 0 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": 0 }
+        ],
+        "duration": 0.6
+      },
+      {
+        "frame": [
+          { "name": "r2_left_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r2_right_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r2_left_shoulder_pitch_joint", "angle": 0 },
+          { "name": "r2_right_shoulder_pitch_joint", "angle": 0 }
+        ],
+        "duration": 0.6
+      }
+    ]
+  }
+]
+
+
+
+
+[
+
+  {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": -16 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 16 }
+        ],
+        "duration": 0.5
+      },
+       {
+        "frame": [
+          { "name": "r1_left_shoulder_pitch_joint", "angle": 12 },
+          { "name": "r1_right_shoulder_pitch_joint", "angle": 12 }
+        ],
+        "duration": 0.5
+      },
+]

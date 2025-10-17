@@ -5,3 +5,51 @@
 {"frame": [{"name": "left_shoulder_pitch_joint", "angle": -10}, {"name": "right_shoulder_pitch_joint", "angle": -10}], "duration": 5},
 {"frame": [{"name": "left_shoulder_yaw_joint", "angle": 0}, {"name": "right_shoulder_yaw_joint", "angle": 0}, {"name": "left_shoulder_pitch_joint", "angle": 0}, {"name": "right_shoulder_pitch_joint", "angle": 0}], "duration": 0.6}
 ]
+
+[
+{
+    "frame": [
+      { "name": "left_shoulder_pitch_joint", "angle": 10 },
+      { "name": "right_shoulder_pitch_joint", "angle": 10 }
+    ],
+    "duration": 0.1
+  },
+  {
+    "frame": [
+      { "name": "left_shoulder_yaw_joint", "angle": -15 },
+      { "name": "right_shoulder_yaw_joint", "angle": 15 }
+    ],
+    "duration": 0.1
+  },
+  {
+    "frame": [
+      { "name": "left_shoulder_pitch_joint", "angle": -10 },
+      { "name": "right_shoulder_pitch_joint", "angle": -10 }
+    ],
+    "duration": 0.5
+  },
+ 
+   {
+    "name": "goto",
+    "x": 2.0,
+    "y": 2.0,
+    "speed": 0.6
+  },
+  
+  {
+    "frame": [
+      { "name": "left_shoulder_yaw_joint", "angle": 0 },
+      { "name": "right_shoulder_yaw_joint", "angle": 0 },
+      { "name": "left_shoulder_pitch_joint", "angle": 0 },
+      { "name": "right_shoulder_pitch_joint", "angle": 0 }
+    ],
+    "duration": 0.6
+  }
+]
+
+
+
+
+
+
+

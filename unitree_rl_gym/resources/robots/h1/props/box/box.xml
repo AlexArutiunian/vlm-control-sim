@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="box">
+  <compiler angle="radian" meshdir="assets" texturedir="assets" autolimits="true"/>
+
+  <asset>
+    <!-- Дайте явные имена -->
+    <mesh    name="box_mesh" file="box.obj"/>
+    <texture name="box_tex"  type="2d" file="box.png"/>
+    <!-- Создаём ДВА материала: 'box' (чтобы удовлетворить старые ссылки) и 'box_orig' -->
+    <material name="box"       specular="0.2" shininess="0.2" texture="box_tex"/>
+    <material name="box_orig"  specular="0.2" shininess="0.2" texture="box_tex"/>
+  </asset>
+
+  <default>
+    <default class="box">
+      <default class="visual_box">
+        <geom type="mesh" mass="5" contype="0" conaffinity="0" group="2"/>
+      </default>
+      <default class="collision_box">
+        <geom type="mesh" mass="0" group="3" solimp="0.95 0.98 0.001" solref="0.004 1" friction="1.5"/>
+      </default>
+    </default>
+  </default>
+
+  <worldbody>
+    <!-- Ставим на стол (z = 1.17 + 0.06 = 1.23), делаем подвижной -->
+    <body name="box" childclass="box" pos="0.55 0.00 1.23">
+      <freejoint/>
+      <!-- Имя геома делаем просто 'mesh' на всякий случай; материал = 'box' -->
+      <geom name="mesh"           class="visual_box"    type="mesh" mesh="box_mesh" material="box" euler="1.5708 0 0"/>
+      <geom name="collider_orig"  class="collision_box" type="box"  size="0.125 0.1 0.06"/>
+    </body>
+  </worldbody>
+</mujoco>

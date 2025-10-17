@@ -36,31 +36,31 @@
     <mesh name="right_wrist_pitch_link" file="right_wrist_pitch_link.STL" />
     <mesh name="logo_link" file="logo_link.STL" />
     <mesh name="L_hand_base_link" file="L_hand_base_link.STL" />
-    <mesh name="link11_L" file="link11_L.STL" />
-    <mesh name="link12_L" file="link12_L.STL" />
-    <mesh name="link13_L" file="link13_L.STL" />
-    <mesh name="link14_L" file="link14_L.STL" />
-    <mesh name="link15_L" file="link15_L.STL" />
-    <mesh name="link16_L" file="link16_L.STL" />
-    <mesh name="link17_L" file="link17_L.STL" />
-    <mesh name="link18_L" file="link18_L.STL" />
-    <mesh name="link19_L" file="link19_L.STL" />
-    <mesh name="link20_L" file="link20_L.STL" />
-    <mesh name="link21_L" file="link21_L.STL" />
-    <mesh name="link22_L" file="link22_L.STL" />
+    <mesh name="link11_L" file="Link11_L.stl" />
+    <mesh name="link12_L" file="Link12_L.stl" />
+    <mesh name="link13_L" file="Link13_L.stl" />
+    <mesh name="link14_L" file="Link14_L.stl" />
+    <mesh name="link15_L" file="Link15_L.stl" />
+    <mesh name="link16_L" file="Link16_L.stl" />
+    <mesh name="link17_L" file="Link17_L.stl" />
+    <mesh name="link18_L" file="Link18_L.stl" />
+    <mesh name="link19_L" file="Link19_L.stl" />
+    <mesh name="link20_L" file="Link20_L.stl" />
+    <mesh name="link21_L" file="Link21_L.stl" />
+    <mesh name="link22_L" file="Link22_L.stl" />
     <mesh name="R_hand_base_link" file="R_hand_base_link.STL" />
-    <mesh name="link11_R" file="link11_R.STL" />
-    <mesh name="link12_R" file="link12_R.STL" />
-    <mesh name="link13_R" file="link13_R.STL" />
-    <mesh name="link14_R" file="link14_R.STL" />
-    <mesh name="link15_R" file="link15_R.STL" />
-    <mesh name="link16_R" file="link16_R.STL" />
-    <mesh name="link17_R" file="link17_R.STL" />
-    <mesh name="link18_R" file="link18_R.STL" />
-    <mesh name="link19_R" file="link19_R.STL" />
-    <mesh name="link20_R" file="link20_R.STL" />
-    <mesh name="link21_R" file="link21_R.STL" />
-    <mesh name="link22_R" file="link22_R.STL" />
+    <mesh name="link11_R" file="Link11_R.stl" />
+    <mesh name="link12_R" file="Link12_R.stl" />
+    <mesh name="link13_R" file="Link13_R.stl" />
+    <mesh name="link14_R" file="Link14_R.stl" />
+    <mesh name="link15_R" file="Link15_R.stl" />
+    <mesh name="link16_R" file="Link16_R.stl" />
+    <mesh name="link17_R" file="Link17_R.stl" />
+    <mesh name="link18_R" file="Link18_R.stl" />
+    <mesh name="link19_R" file="Link19_R.stl" />
+    <mesh name="link20_R" file="Link20_R.stl" />
+    <mesh name="link21_R" file="Link21_R.stl" />
+    <mesh name="link22_R" file="Link22_R.stl" />
   </asset>
   <worldbody>
     <body name="pelvis" pos="0 0 1.03">
@@ -346,7 +346,6 @@
 
 
   <actuator>
-  <motor name="left_shoulder_pitch_joint" joint="left_shoulder_pitch_joint" gear="60" ctrlrange="-1 1" />
   <motor name="left_hip_yaw_joint" joint="left_hip_yaw_joint" />
   <motor name="left_hip_pitch_joint" joint="left_hip_pitch_joint" />
   <motor name="left_hip_roll_joint" joint="left_hip_roll_joint" />
@@ -360,6 +359,8 @@
   <motor name="right_ankle_pitch_joint" joint="right_ankle_pitch_joint" />
   <motor name="right_ankle_roll_joint" joint="right_ankle_roll_joint" />
   <motor name="torso_joint" joint="torso_joint" gear="60" ctrlrange="-1 1" />
+  
+  <motor name="left_shoulder_pitch_joint" joint="left_shoulder_pitch_joint" gear="60" ctrlrange="-1 1" />
   <motor name="left_shoulder_roll_joint" joint="left_shoulder_roll_joint" gear="60" ctrlrange="-1 1" />
   <motor name="left_shoulder_yaw_joint" joint="left_shoulder_yaw_joint" gear="60" ctrlrange="-1 1" />
   <motor name="left_elbow_pitch_joint" joint="left_elbow_pitch_joint" gear="50" ctrlrange="-1 1" />
@@ -398,4 +399,10 @@
   <motor name="R_pinky_proximal_joint" joint="R_pinky_proximal_joint" gear="1" ctrlrange="-3 3" />
   <motor name="R_pinky_intermediate_joint" joint="R_pinky_intermediate_joint" gear="1" ctrlrange="-3 3" />
 </actuator>
+<equality>
+  <!-- имена корректируй под свою сцену -->
+  <weld body1="pelvis" body2="torso_link" solimp="0.9 0.95 0.001" solref="0.02 1"/>
+  
+</equality>
+
 </mujoco>

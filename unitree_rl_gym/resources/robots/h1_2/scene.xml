@@ -57,7 +57,12 @@
     <!-- Освещение и пол -->
     <light pos="1 0 3.5" dir="0 0 -1" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
-
+      <body name="box3" pos="0.6 0 0">
+            <geom name="box3_geom" type="box" size="0.45 0.6 0.01"
+                  mass="0.01"
+                  rgba="1 1 1 0"
+                />
+          </body>
     <!-- Стол -->
     <body name="table_body" childclass="prop_table" pos="0.6 0 0.0" euler="0 0 -1.57">
       <!-- Визуал -->
@@ -71,8 +76,8 @@
       <geom name="table_col_005" mesh="table_collision_005" class="prop_collision"/>
       <geom name="table_col_006" mesh="table_collision_006" class="prop_collision"/>
       <geom name="table_col_007" mesh="table_collision_007" class="prop_collision"/>
+    
     </body>
-
     <!-- Белая коробка: усиленный контакт -->
     <body name="box" pos="0.4 0 1.02">
       <freejoint/>
@@ -84,5 +89,48 @@
             solimp="0.9 0.95 0.001"
             solref="0.002 1"/>
     </body>
+   
+
+
+    <!-- Белая коробка: усиленный контакт -->
+     <body name="box_table2" pos="2 2 0">
+            <geom name="box_table2_geom" type="box" size="0.45 0.6 0.01"
+                  mass="0.01"
+                  rgba="1 1 1 0"
+                />
+          </body>
+
+        <!-- Стол -->
+    <body name="table2_body" childclass="prop_table" pos="2 2 0.0" euler="0 0 -1.57">
+      <!-- Визуал -->
+      <geom name="table2_mesh"      mesh="table"      class="prop_visual"   material="table"/>
+      <geom name="table2_mesh_legs" mesh="table_legs" class="prop_visual"   material="table_legs"/>
+      <!-- Коллизии -->
+      <geom name="table2_col_001" mesh="table_collision_001" class="prop_collision"/>
+      <geom name="table2_col_002" mesh="table_collision_002" class="prop_collision"/>
+      <geom name="table2_col_003" mesh="table_collision_003" class="prop_collision"/>
+      <geom name="table2_col_004" mesh="table_collision_004" class="prop_collision"/>
+      <geom name="table2_col_005" mesh="table_collision_005" class="prop_collision"/>
+      <geom name="table2_col_006" mesh="table_collision_006" class="prop_collision"/>
+      <geom name="table2_col_007" mesh="table_collision_007" class="prop_collision"/>
+    </body>
+
+         <!-- Стол -->
+    <body name="table3_body" childclass="prop_table" pos="-6 -6 0.0" euler="0 0 -1.57">
+      <!-- Визуал -->
+      <geom name="table3_mesh"      mesh="table"      class="prop_visual"   material="table"/>
+      <geom name="table3_mesh_legs" mesh="table_legs" class="prop_visual"   material="table_legs"/>
+      <!-- Коллизии -->
+      <geom name="table3_col_001" mesh="table_collision_001" class="prop_collision"/>
+      <geom name="table3_col_002" mesh="table_collision_002" class="prop_collision"/>
+      <geom name="table3_col_003" mesh="table_collision_003" class="prop_collision"/>
+      <geom name="table3_col_004" mesh="table_collision_004" class="prop_collision"/>
+      <geom name="table3_col_005" mesh="table_collision_005" class="prop_collision"/>
+      <geom name="table3_col_006" mesh="table_collision_006" class="prop_collision"/>
+      <geom name="table3_col_007" mesh="table_collision_007" class="prop_collision"/>
+    
+    </body>
+
+    
   </worldbody>
 </mujoco>

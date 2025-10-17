@@ -1,0 +1,30 @@
+{
+        "frame": [
+          { "name": "r1_left_elbow_pitch_joint", "angle": -26 },
+          { "name": "r1_right_elbow_pitch_joint", "angle": -26 }
+        ],
+        "duration": 0.1
+      },
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": -26 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 26 }
+        ],
+        "duration": 0.1
+      },
+
+
+      [{
+        "frame": [
+          { "name": "r1_left_elbow_pitch_joint", "angle": 0 },
+          { "name": "r1_right_elbow_pitch_joint", "angle": 0 }
+        ],
+        "duration": 0.1
+      },
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 0 }
+        ],
+        "duration": 0.1
+      }]

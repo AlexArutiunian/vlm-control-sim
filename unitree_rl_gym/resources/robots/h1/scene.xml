@@ -1,5 +1,12 @@
 <mujoco model="h1 scene">
-  <include file="h1.xml"/>
+
+
+  <include file="h1_r1.xml"/>
+  <include file="upper_r1.xml"/>
+ 
+
+  <include file="h1_r2.xml"/>
+  <include file="upper_r2.xml"/>
 
   <statistic center="1.0 0.7 1.0" extent="0.8"/>
 
@@ -7,16 +14,256 @@
     <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0.9 0.9 0.9"/>
     <rgba haze="0.15 0.25 0.35 1"/>
     <global azimuth="-140" elevation="-20"/>
+  
+ <quality shadowsize="4096"/>
+
   </visual>
 
+  <default>
+
+   <default class="prop_table">          <!-- было: table -->
+      <default class="prop_visual">       <!-- было: visual -->
+        <geom type="mesh" contype="0" conaffinity="0" group="2" euler="1.5708 0 0"/>
+      </default>
+      <default class="prop_collision">    <!-- было: collision -->
+        <geom type="mesh" group="3" euler="1.5708 0 0"/>
+      </default>
+    </default>
+
+    <default class="wrist_joint">
+      <joint
+            
+        damping="8"           
+        frictionloss="0.25"  
+        armature="0.02"      
+        />       
+    </default>
+    <default class="h1">
+      <joint damping="1" armature="0.1"/>
+      <default class="visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2" material="black"/>
+      </default>
+      <default class="collision">
+
+  <geom group="3"
+        contype="1" conaffinity="1"
+        friction="1.0 0.02 0.001"
+        solref="0.005 1"
+        solimp="0.9 0.95 0.001"/>
+</default>
+      <site size="0.001" rgba="0.5 0.5 0.5 0.3" group="4"/>
+    </default>
+  </default>
+
+
+
   <asset>
+    <material name="black" rgba="0.1 0.1 0.1 1"/>
+    <material name="white" rgba="1 1 1 1"/>
     <texture type="skybox" builtin="flat" rgb1="0 0 0" rgb2="0 0 0" width="512" height="3072"/>
     <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    <texture type="2d" name="table" file="meshes/table.png"/>
+    <material name="table" specular="0.3" shininess="0.5" rgba="0.62 0.62 0.6 1" texture="table"/>
+    <material name="table_legs" specular="0.3" shininess="0.5" rgba="1 1 1 1" texture="table"/>
+    <mesh file="table.obj"/>
+    <mesh file="table_legs.obj"/>
+    <mesh file="table_collision_001.obj"/>
+    <mesh file="table_collision_002.obj"/>
+    <mesh file="table_collision_003.obj"/>
+    <mesh file="table_collision_004.obj"/>
+    <mesh file="table_collision_005.obj"/>
+    <mesh file="table_collision_006.obj"/>
+    <mesh file="table_collision_007.obj"/>
+
+    <mesh name="pelvis" file="pelvis.STL"/>
+    <mesh name="left_hip_yaw_link" file="left_hip_yaw_link.STL"/>
+    <mesh name="left_hip_roll_link" file="left_hip_roll_link.STL"/>
+    <mesh name="left_hip_pitch_link" file="left_hip_pitch_link.STL"/>
+    <mesh name="left_knee_link" file="left_knee_link.STL"/>
+    <mesh name="left_ankle_link" file="left_ankle_link.STL"/>
+    <mesh name="right_hip_yaw_link" file="right_hip_yaw_link.STL"/>
+    <mesh name="right_hip_roll_link" file="right_hip_roll_link.STL"/>
+    <mesh name="right_hip_pitch_link" file="right_hip_pitch_link.STL"/>
+    <mesh name="right_knee_link" file="right_knee_link.STL"/>
+    <mesh name="right_ankle_link" file="right_ankle_link.STL"/>
+    <mesh name="torso_link" file="torso_link.STL"/>
+
+    <mesh name="left_shoulder_pitch_link" file="left_shoulder_pitch_link.STL"/>
+    <mesh name="left_shoulder_roll_link" file="left_shoulder_roll_link.STL"/>
+    <mesh name="left_shoulder_yaw_link" file="left_shoulder_yaw_link.STL"/>
+    <mesh name="left_elbow_link" file="left_elbow_link.STL"/>
+    <mesh name="left_hand_link" file="left_hand_link.stl"/>
+
+    
+    <mesh name="right_shoulder_pitch_link" file="right_shoulder_pitch_link.STL"/>
+    <mesh name="right_shoulder_roll_link" file="right_shoulder_roll_link.STL"/>
+    <mesh name="right_shoulder_yaw_link" file="right_shoulder_yaw_link.STL"/>
+    <mesh name="right_elbow_link" file="right_elbow_link.STL"/>
+    <mesh name="right_hand_link" file="right_hand_link.stl"/>
+
+    <mesh name="logo_link" file="logo_link.STL"/>
+
+    <!-- ЛЕВАЯ КИСТЬ -->
+    <mesh name="L_hand_base_link" file="L_hand_base_link.stl"/>
+    <mesh name="Link11_L" file="Link11_L.stl"/>
+    <mesh name="Link12_L" file="Link12_L.stl"/>
+    <mesh name="Link13_L" file="Link13_L.stl"/>
+    <mesh name="Link14_L" file="Link14_L.stl"/>
+    <mesh name="Link15_L" file="Link15_L.stl"/>
+    <mesh name="Link16_L" file="Link16_L.stl"/>
+    <mesh name="Link17_L" file="Link17_L.stl"/>
+    <mesh name="Link18_L" file="Link18_L.stl"/>
+    <mesh name="Link19_L" file="Link19_L.stl"/>
+    <mesh name="Link20_L" file="Link20_L.stl"/>
+    <mesh name="Link21_L" file="Link21_L.stl"/>
+    <mesh name="Link22_L" file="Link22_L.stl"/>
+
+    <!-- ПРАВАЯ КИСТЬ -->
+    <mesh name="R_hand_base_link" file="R_hand_base_link.stl"/>
+    <mesh name="Link11_R" file="Link11_R.stl"/>
+    <mesh name="Link12_R" file="Link12_R.stl"/>
+    <mesh name="Link13_R" file="Link13_R.stl"/>
+    <mesh name="Link14_R" file="Link14_R.stl"/>
+    <mesh name="Link15_R" file="Link15_R.stl"/>
+    <mesh name="Link16_R" file="Link16_R.stl"/>
+    <mesh name="Link17_R" file="Link17_R.stl"/>
+    <mesh name="Link18_R" file="Link18_R.stl"/>
+    <mesh name="Link19_R" file="Link19_R.stl"/>
+    <mesh name="Link20_R" file="Link20_R.stl"/>
+    <mesh name="Link21_R" file="Link21_R.stl"/>
+    <mesh name="Link22_R" file="Link22_R.stl"/>
+
+    <!-- ===== Inspire Hands meshes (LEFT) ===== -->
+    <mesh name="l_palm_vis" file="inspire_hands/lh_base_link.STL"/>
+    <mesh name="l_palm_col" file="inspire_hands/lh_base_link.STL"/>
+    <mesh name="l_thumb_proximal_1_vis" file="inspire_hands/lh_Link11.STL"/>
+    <mesh name="l_thumb_proximal_1_col" file="inspire_hands/lh_Link11.STL"/>
+    <mesh name="l_thumb_proximal_2_vis" file="inspire_hands/lh_Link12.STL"/>
+    <mesh name="l_thumb_proximal_2_col" file="inspire_hands/lh_Link12.STL"/>
+    <mesh name="l_thumb_middle_vis" file="inspire_hands/lh_Link13.STL"/>
+    <mesh name="l_thumb_middle_col" file="inspire_hands/lh_Link13.STL"/>
+    <mesh name="l_thumb_distal_vis" file="inspire_hands/lh_Link14.STL"/>
+    <mesh name="l_thumb_distal_col" file="inspire_hands/lh_Link14.STL"/>
+    <mesh name="l_index_proximal_vis" file="inspire_hands/lh_Link15.STL"/>
+    <mesh name="l_index_proximal_col" file="inspire_hands/lh_Link15.STL"/>
+    <mesh name="l_index_distal_vis" file="inspire_hands/lh_Link16.STL"/>
+    <mesh name="l_index_distal_col" file="inspire_hands/lh_Link16.STL"/>
+    <mesh name="l_middle_proximal_vis" file="inspire_hands/lh_Link17.STL"/>
+    <mesh name="l_middle_proximal_col" file="inspire_hands/lh_Link17.STL"/>
+    <mesh name="l_middle_distal_vis" file="inspire_hands/lh_Link18.STL"/>
+    <mesh name="l_middle_distal_col" file="inspire_hands/lh_Link18.STL"/>
+    <mesh name="l_ring_proximal_vis" file="inspire_hands/lh_Link19.STL"/>
+    <mesh name="l_ring_proximal_col" file="inspire_hands/lh_Link19.STL"/>
+    <mesh name="l_ring_distal_vis" file="inspire_hands/lh_Link20.STL"/>
+    <mesh name="l_ring_distal_col" file="inspire_hands/lh_Link20.STL"/>
+    <mesh name="l_pinky_proximal_vis" file="inspire_hands/lh_Link21.STL"/>
+    <mesh name="l_pinky_proximal_col" file="inspire_hands/lh_Link21.STL"/>
+    <mesh name="l_pinky_distal_vis" file="inspire_hands/lh_Link22.STL"/>
+    <mesh name="l_pinky_distal_col" file="inspire_hands/lh_Link22.STL"/>
+
+
+    <material name="site_left_hand" rgba="0.1882 0.1882 0.1882 0"/>
+    <material name="l_base_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="l_thumb_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="l_index_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="l_middle_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="l_ring_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="l_pinky_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="l_thumb_distal_material" rgba="0.576 0.576 0.576 1"/>
+  <!-- ===== Inspire Hands meshes (RIGHT) ===== -->
+  <mesh name="r_palm_vis" file="inspire_hands/rh_base_link.STL"/>
+    <mesh name="r_palm_col" file="inspire_hands/rh_base_link.STL"/>
+    <mesh name="r_thumb_proximal_1_vis" file="inspire_hands/rh_Link11.STL"/>
+    <mesh name="r_thumb_proximal_1_col" file="inspire_hands/rh_Link11.STL"/>
+    <mesh name="r_thumb_proximal_2_vis" file="inspire_hands/rh_Link12.STL"/>
+    <mesh name="r_thumb_proximal_2_col" file="inspire_hands/rh_Link12.STL"/>
+    <mesh name="r_thumb_middle_vis" file="inspire_hands/rh_Link13.STL"/>
+    <mesh name="r_thumb_middle_col" file="inspire_hands/rh_Link13.STL"/>
+    <mesh name="r_thumb_distal_vis" file="inspire_hands/rh_Link14.STL"/>
+    <mesh name="r_thumb_distal_col" file="inspire_hands/rh_Link14.STL"/>
+    <mesh name="r_index_proximal_vis" file="inspire_hands/rh_Link15.STL"/>
+    <mesh name="r_index_proximal_col" file="inspire_hands/rh_Link15.STL"/>
+    <mesh name="r_index_distal_vis" file="inspire_hands/rh_Link16.STL"/>
+    <mesh name="r_index_distal_col" file="inspire_hands/rh_Link16.STL"/>
+    <mesh name="r_middle_proximal_vis" file="inspire_hands/rh_Link17.STL"/>
+    <mesh name="r_middle_proximal_col" file="inspire_hands/rh_Link17.STL"/>
+    <mesh name="r_middle_distal_vis" file="inspire_hands/rh_Link18.STL"/>
+    <mesh name="r_middle_distal_col" file="inspire_hands/rh_Link18.STL"/>
+    <mesh name="r_ring_proximal_vis" file="inspire_hands/rh_Link19.STL"/>
+    <mesh name="r_ring_proximal_col" file="inspire_hands/rh_Link19.STL"/>
+    <mesh name="r_ring_distal_vis" file="inspire_hands/rh_Link20.STL"/>
+    <mesh name="r_ring_distal_col" file="inspire_hands/rh_Link20.STL"/>
+    <mesh name="r_pinky_proximal_vis" file="inspire_hands/rh_Link21.STL"/>
+    <mesh name="r_pinky_proximal_col" file="inspire_hands/rh_Link21.STL"/>
+    <mesh name="r_pinky_distal_vis" file="inspire_hands/rh_Link22.STL"/>
+    <mesh name="r_pinky_distal_col" file="inspire_hands/rh_Link22.STL"/>
+
+    <material name="site_right_hand" rgba="0.1882 0.1882 0.1882 0"/>
+    <material name="r_base_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="r_thumb_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="r_index_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="r_middle_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="r_ring_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="r_pinky_material" rgba="0.576 0.576 0.576 1"/>
+    <material name="r_thumb_distal_material" rgba="0.576 0.576 0.576 1"/>
+
   </asset>
 
   <worldbody>
+
+   <body name="robot1_frame" pos="0 0 0"/>
+    <body name="robot2_frame" pos="-10.2 10 0"/>
+
+      <body name="table" childclass="prop_table" pos="0.7 0.0 0.0" euler="0 0 -1.57">
+      <geom name="mesh"       mesh="table"       class="prop_visual"   material="table"/>
+      <geom name="mesh_legs"  mesh="table_legs"  class="prop_visual"   material="table_legs"/>
+      <geom name="collider_001" mesh="table_collision_001" class="prop_collision"/>
+      <geom name="collider_002" mesh="table_collision_002" class="prop_collision"/>
+      <geom name="collider_003" mesh="table_collision_003" class="prop_collision"/>
+      <geom name="collider_004" mesh="table_collision_004" class="prop_collision"/>
+      <geom name="collider_005" mesh="table_collision_005" class="prop_collision"/>
+      <geom name="collider_006" mesh="table_collision_006" class="prop_collision"/>
+      <geom name="collider_007" mesh="table_collision_007" class="prop_collision"/>
+    </body>
+   
+
+     <body name="table2" childclass="prop_table" pos="0.0 1.5 0.0" euler="0 0 0">
+      <geom name="mesh2"       mesh="table"       class="prop_visual"   material="table"/>
+      <geom name="mesh2_legs"  mesh="table_legs"  class="prop_visual"   material="table_legs"/>
+      <geom name="collider2_001" mesh="table_collision_001" class="prop_collision"/>
+      <geom name="collider2_002" mesh="table_collision_002" class="prop_collision"/>
+      <geom name="collider2_003" mesh="table_collision_003" class="prop_collision"/>
+      <geom name="collider2_004" mesh="table_collision_004" class="prop_collision"/>
+      <geom name="collider2_005" mesh="table_collision_005" class="prop_collision"/>
+      <geom name="collider2_006" mesh="table_collision_006" class="prop_collision"/>
+      <geom name="collider2_007" mesh="table_collision_007" class="prop_collision"/>
+    </body>
+
+    <!-- КОРОБКА: динамическая с freejoint -->
+    <body name="box" pos="0.55 0.00 1.222">
+      <!-- Свободное 6DoF тело -->
+      <freejoint/>
+      <!-- Куб 10 см. Важно: mass или density задать явно -->
+      <geom name="box_geom" type="box" size="0.1 0.1 0.1"
+            mass="1e-6"
+            rgba="0.2 0.3 0.8 1"
+            contype="1" conaffinity="1"
+            friction="1.2 0.02 0.001"
+            solref="0.02 1" solimp="0.9 0.95 0.001"/>
+    </body>
+
     <light pos="1 0 3.5" dir="0 0 -1" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+
   </worldbody>
+
+<equality>
+    <weld body1="r1_pelvis" body2="r1_torso_link" relpose="0 0 0 1 0 0 0"/>
+    <weld body1="r2_pelvis" body2="r2_torso_link" relpose="0 0 0 1 0 0 0"/>
+  </equality>
+
+  <keyframe>
+    
+  </keyframe>
 </mujoco>

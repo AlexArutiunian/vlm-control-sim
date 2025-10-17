@@ -1,0 +1,57 @@
+<mujoco model="table">
+  <compiler meshdir="meshes" texturedir="meshes" angle="radian"/>
+
+  <!-- Локальные defaults для визуала/коллизий стола -->
+  <default>
+    <default class="prop_table">
+      <default class="prop_visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2" euler="1.5708 0 0"/>
+      </default>
+      <default class="prop_collision">
+        <geom type="mesh" group="3" euler="1.5708 0 0" contype="1" conaffinity="3"/>
+      </default>
+    </default>
+  </default>
+
+  <!-- Все ассеты, нужные столу -->
+  <asset>
+    <texture type="2d" name="table_tex" file="table.png"/>
+    <material name="table"      specular="0.3" shininess="0.5" rgba="0.62 0.62 0.6 1" texture="table_tex"/>
+    <material name="table_legs" specular="0.3" shininess="0.5" rgba="1 1 1 1"          texture="table_tex"/>
+
+    <mesh name="table"       file="table.obj"              scale="1 1 1"/>
+    <mesh name="table_legs"  file="table_legs.obj"         scale="1 1 1"/>
+    <mesh name="table_collision_001" file="table_collision_001.obj" scale="1 1 1"/>
+    <mesh name="table_collision_002" file="table_collision_002.obj" scale="1 1 1"/>
+    <mesh name="table_collision_003" file="table_collision_003.obj" scale="1 1 1"/>
+    <mesh name="table_collision_004" file="table_collision_004.obj" scale="1 1 1"/>
+    <mesh name="table_collision_005" file="table_collision_005.obj" scale="1 1 1"/>
+    <mesh name="table_collision_006" file="table_collision_006.obj" scale="1 1 1"/>
+    <mesh name="table_collision_007" file="table_collision_007.obj" scale="1 1 1"/>
+  </asset>
+
+  <worldbody>
+  <body name="tablebox" pos="0 0 0"  euler="0 0 1.57">
+            <geom name="tablebox_geom" type="box" size="0.45 0.6 0.01"
+                  mass="0.01"
+                  rgba="1 1 1 0"
+                />
+          </body>
+    <!-- Один корневой body стола: все визуалы и коллизии внутри -->
+    <body name="table_body" childclass="prop_table" pos="0 0 0" >
+      <!-- Визуал -->
+      <geom name="table_mesh"      mesh="table"      class="prop_visual"   material="table"/>
+      <geom name="table_mesh_legs" mesh="table_legs" class="prop_visual"   material="table_legs"/>
+      <!-- Коллизии -->
+      <geom name="table_col_001" mesh="table_collision_001" class="prop_collision"/>
+      <geom name="table_col_002" mesh="table_collision_002" class="prop_collision"/>
+      <geom name="table_col_003" mesh="table_collision_003" class="prop_collision"/>
+      <geom name="table_col_004" mesh="table_collision_004" class="prop_collision"/>
+      <geom name="table_col_005" mesh="table_collision_005" class="prop_collision"/>
+      <geom name="table_col_006" mesh="table_collision_006" class="prop_collision"/>
+      <geom name="table_col_007" mesh="table_collision_007" class="prop_collision"/>
+    </body>
+
+   
+  </worldbody>
+</mujoco>
