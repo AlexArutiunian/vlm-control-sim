@@ -21,9 +21,9 @@ from collections import deque
 # =========================
 
 # --- UPPER-BODY PD control (replaces the old ARM_* block) ---
-UPPER_HOLD_ZERO = True   # <— ключ: держать нули по умолчанию
+UPPER_HOLD_ZERO = True   # <— key: zero angles by default
 
-UPPER_JOINTS: list[str] = []     # имена суставов верхней части (динамически)
+UPPER_JOINTS: list[str] = []     # dynamic names on joints
 ARM_NAME_TO_IDX = {}
 ARM_JIDS = []
 ARM_ACT_IDS = []
@@ -34,7 +34,7 @@ ARM_KPS = None
 ARM_KDS = None
 ARM_KIS = None
 ARM_IERR = None
-ARM_I_CLAMP = 0.7  # рад*с, ограничение интеграла
+ARM_I_CLAMP = 0.7  # integral limit
 
 def log_zeroed_upper():
     if not ARM_NAME_TO_IDX:
@@ -54,23 +54,22 @@ _FINGER_TOKENS= ("thumb", "index", "middle", "ring", "pinky", "finger")
 _UPPER_TOKENS = ("shoulder","elbow","wrist","hand","torso","waist","spine","chest","neck","head") + _FINGER_TOKENS
 
 def _is_upper_joint(name: str) -> bool:
-    """True для суставов верха, включая пальцы h1/h1_2 (L_/R_*)."""
+    """True for  upper h1/h1_2 (L_/R_*)."""
     nm = name.lower()
 
-    # убрать префикс робота r1_/r2_/r3_ и суффикс _joint
+    # to zero prefix
     nm = re.sub(r"^r\d+_", "", nm)
     if nm.endswith("_joint"):
         nm = nm[:-6]
 
-    # быстрый фильтр ног
+    # fast leg filter
     if any(tok in nm for tok in _LEG_TOKENS):
         return False
 
-    # явные признаки верха (включая thumb/index/…)
+    # clear signs of the top (including thumb/index/…)
     if any(tok in nm for tok in _UPPER_TOKENS):
         return True
 
-    # формат h1/h1_2: "l_*" / "r_*" + признаки кисти/пальцев/руки/плеча
     if nm.startswith(("l_", "r_")):
         rest = nm[2:]
         if any(tok in rest for tok in _FINGER_TOKENS + ("wrist","hand","elbow","shoulder")):
@@ -80,24 +79,24 @@ def _is_upper_joint(name: str) -> bool:
 
 
 def _suggest_kp(name: str) -> float:
-    # чуть жёстче плечо/торс, мягче кисть, ещё мягче пальцы
+    
     if name == "torso_joint": return 40.0
     if "shoulder" in name:   return 40.0
     if "elbow" in name:      return 30.0
     if "wrist" in name:      return 12.0
-    # пальцы (L_/R_*)
+    
     return 4.0
 
 def setup_arm_pd(zero_pose: bool = True):
-    """Привязать ВСЕ суставы верхней части и инициализировать PD-цели.
-    Если у актуатора нет name==joint_name, ищем по trnid (target=этот joint)."""
+    """Bind ALL top joints and initialize PD-goals.
+    If the actuator does not have name==joint_name, searching by trnid (target=this joint)."""
     global UPPER_JOINTS, ARM_NAME_TO_IDX, ARM_JIDS, ARM_ACT_IDS
     global ARM_QPOS_ADDRS, ARM_QVEL_ADDRS, ARM_TARGETS, ARM_KPS, ARM_KDS
     global ARM_KIS, ARM_IERR
     ARM_NAME_TO_IDX.clear()
     ARM_JIDS.clear(); ARM_ACT_IDS.clear(); ARM_QPOS_ADDRS.clear(); ARM_QVEL_ADDRS.clear()
 
-    # 1) собрать имена верхних hinge-суставов
+    # 1) collect the names of the top hinge-joints
     UPPER_JOINTS = []
     for j in range(m.njnt):
         if m.jnt_type[j] != mj.mjtJoint.mjJNT_HINGE:
@@ -106,17 +105,17 @@ def setup_arm_pd(zero_pose: bool = True):
         if _is_upper_joint(nm):
             UPPER_JOINTS.append(nm)
 
-    # 2) построить фолбэк-карту: joint_id -> actuator_id (для actuator с JOINT target)
+    # 2) build a fallback map: joint_id -> actuator_id (For actuator With JOINT target)
     trn  = np.array(m.actuator_trnid).reshape(m.nu, 2) if m.nu > 0 else np.zeros((0, 2), dtype=int)
     trnt = np.array(m.actuator_trntype) if m.nu > 0 else np.zeros((0,), dtype=int)
     jointid_to_act = {}
     for i in range(m.nu):
         if trnt[i] == mj.mjtTrn.mjTRN_JOINT:
             jid_target = int(trn[i, 0])
-            # первый найденный считаем основным
+            # The first one found is considered the main one
             jointid_to_act.setdefault(jid_target, i)
 
-    # 3) связать joint ↔ actuator (сначала по имени, иначе по trnid)
+    # 3) tie joint ↔ actuator (first by name, otherwise by trnid)
     names_in_order = []
     for name in UPPER_JOINTS:
         jid = mj.mj_name2id(m, mj.mjtObj.mjOBJ_JOINT, name)
@@ -124,9 +123,9 @@ def setup_arm_pd(zero_pose: bool = True):
             print(f"[UPPER] joint '{name}' not found — skip")
             continue
 
-        # пробуем имя
+        # trying out the name
         aid = mj.mj_name2id(m, mj.mjtObj.mjOBJ_ACTUATOR, name)
-        # если имени нет — берём по целевому joint'у
+        # if there is no name, take the target one joint'at
         if aid < 0:
             aid = jointid_to_act.get(jid, -1)
 
@@ -150,17 +149,17 @@ def setup_arm_pd(zero_pose: bool = True):
         ARM_KDS = np.zeros(0, dtype=np.float32)
         return
 
-    # 4) цели: либо нули, либо текущие значения
+    # 4) targets: either zeros or current values
     if zero_pose:
         ARM_TARGETS = np.zeros(n, dtype=np.float32)
         log_zeroed_upper()
     else:
         ARM_TARGETS = np.array([d.qpos[i] for i in ARM_QPOS_ADDRS], dtype=np.float32)
 
-    # 5) Kp/Kd в порядке индексов
+    # 5) Kp/Kd in index order
     ARM_KPS = np.array([_suggest_kp(nm) for nm in names_in_order], dtype=np.float32)
     ARM_KDS = np.clip(ARM_KPS * 0.05, 0.2, None).astype(np.float32)
-    ARM_KIS = np.clip(ARM_KPS * 0.02, 0.0, 1.0).astype(np.float32)  # мягкий интеграл
+    ARM_KIS = np.clip(ARM_KPS * 0.02, 0.0, 1.0).astype(np.float32)  # soft integral
     ARM_IERR = np.zeros_like(ARM_KPS, dtype=np.float32)
 
     print(f"[UPPER] PD enabled for {n} joints:", names_in_order)
@@ -213,10 +212,10 @@ def run_walk_blocking(num: int, dir_deg: float, spd: float):
     while steps_done < steps_needed and not glfw.window_should_close(window):
         if not step_once(render=True):
             break
-        # детекция шага по фронту sin(phase)
+        # front step detection sin(phase)
         if PHASE_SIN >= 0 and PHASE_PREV_SIN < 0:
             if STANCE_HOLD:
-                # (как у вас было; можно оставить логику stance)
+                # (how was it with you; you can leave the logic stance)
                 pass
             else:
                 steps_done += 1
@@ -278,64 +277,64 @@ ang_vel_scale = dof_pos_scale = dof_vel_scale = action_scale = None
 cmd_scale = None
 num_actions = num_obs = None
 movement = {}
-# ==== MINIMAP (реальное время, вид сверху) ====
-MAP_CELL_M    = 0.05          # 5 см на пиксель (оставьте как есть)
-MAP_RADIUS_M  = 3.0           # радиус видимой зоны вокруг робота, м
-MAP_SIZE_M    = MAP_RADIUS_M * 2.0   # окно карты — диаметр 6 м
+# ==== MINIMAP (real time, top view) ====
+MAP_CELL_M    = 0.05          # 5 cm per pixel (leave as is)
+MAP_RADIUS_M  = 3.0           # radius of the visible zone around the robot, m
+MAP_SIZE_M    = MAP_RADIUS_M * 2.0   # map window - diameter 6 m
 MINIMAP_PX    = 220
 MAP_BG        = 230
 MAP_OBJ_COL   = 80
 MAP_ROBOT_COL = (220, 40, 40)
-MAP_ZONE_COL  = (120, 180, 240)  # цвет кольца зоны (3 м)
+MAP_ZONE_COL  = (120, 180, 240)  # zone ring color (3m)
 MAP_BORDER    = 40
 
-MAP_FOLLOW_YAW = True  # карта поворачивается с роботом (False — «север вверх»)
+MAP_FOLLOW_YAW = True  # the map is rotated with a robot (False — «north up»)
 # === Reactive obstacle avoidance (applies to ANY walking) ===
 NAV_AVOID_ENABLE    = True
-NAV_LOOKAHEAD       = 0.90   # на сколько метров «заглядываем» вперёд
-NAV_STOP_DIST       = 0.30   # буфер до препятствия, при котором начинаем тормозить/обходить
-NAV_INFLATE_CELLS   = 2      # «толщина робота» в клетках миникарты
-NAV_SEARCH_DEG      = 120    # веер поиска альтернативного курса (±)
-NAV_RAYS            = 29     # число лучей в веере (нечётное)
-NAV_MAX_YAW_RATE    = math.radians(160.0)  # физ. предел скорости вращения
+NAV_LOOKAHEAD       = 0.90   # how many meters do we “look” ahead?
+NAV_STOP_DIST       = 0.30   # buffer to the obstacle at which we begin to brake/bypass
+NAV_INFLATE_CELLS   = 2      # «robot thickness" in minimap cells
+NAV_SEARCH_DEG      = 120    # search fan for an alternative course (±)
+NAV_RAYS            = 29     # number of rays in the fan (odd)
+NAV_MAX_YAW_RATE    = math.radians(160.0)  # physical rotation speed limit
 
-# кэш оккупации на несколько тиков, чтобы не строить карту каждый раз
+# occupation cache for several ticks, so as not to build a map every time
 _NAV_OCC_CACHE = {"n": 64, "occ": None, "tick": -1000}
 
-# исключаемые геомы по имени/типу (пол, бесконечные плоскости и т.п.)
+# excluded geoms by name/type (floor, infinite planes, etc..)
 MAP_EXCLUDE_SUBSTR = ("floor", "ground")
 def _world_to_grid(x: float, y: float, n: int) -> tuple[int, int]:
     """
-    Перевод мировой точки (x,y) в пиксели миникарты:
-    - центр карты совпадает с позицией робота;
-    - при MAP_FOLLOW_YAW=True карта повёрнута так, что «вперёд робота» = вверх.
+    World point translation (x,y) to minimap pixels:
+    - the center of the map coincides with the robot’s position;
+    - at MAP_FOLLOW_YAW=True the map is rotated so that the robot is ahead» = up.
     """
-    # центр окна (в метрах от робота)
+    # center of the window (meters from the robot)
     half = MAP_SIZE_M * 0.5
 
-    # позиция и курс робота
+    # robot position and heading
     rx, ry = float(d.qpos[0]), float(d.qpos[1])
     qw, qx, qy, qz = d.qpos[3:7]
     yaw = _quat_yaw(qw, qx, qy, qz) if MAP_FOLLOW_YAW else 0.0
 
-    # сдвиг в систему робота
+    # shift to robot system
     dx, dy = x - rx, y - ry
 
-    # поворот на -yaw (мир -> «корпус»)
+    # turn to -yaw (world -> «frame»)
     ca, sa = math.cos(-yaw), math.sin(-yaw)
-    xr = ca * dx - sa * dy   # вперёд (ось робота)
-    yr = sa * dx + ca * dy   # влево  (ось робота)
+    xr = ca * dx - sa * dy   # forward (robot axis)
+    yr = sa * dx + ca * dy   # left (robot axis)
 
-    # проекция в пиксели:
-    #   gx — горизонталь (вправо положительно) ← берём «влево робота»
-    #   gy — вертикаль (вниз положительно)    ← берём «вперёд робота»
-    # После flipud() «вперёд робота» станет вверх на экране.
+    # projection to pixels:
+    #   gx — horizontal (right positive) ← take “robot left”»
+    #   gy — vertical (down positive)    ← let's take the robot forward»
+    # After flipud() «forward robot" will appear up on the screen.
     gx = int((yr + half) / MAP_CELL_M)
     gy = int((xr + half) / MAP_CELL_M)
     return gx, gy
 
 def _draw_ring(img: np.ndarray, cx: int, cy: int, r: int, rgb=(0,0,0), thickness: int = 2):
-    # тонкое кольцо радиуса r (толщина в пикселях)
+    # thin radius ring r (thickness in pixels)
     for t in range(0, 360):
         ang = math.radians(t)
         for k in range(thickness):
@@ -367,14 +366,14 @@ def _ray_first_hit_distance_world(x0: float, y0: float, ang: float,
                                   skip_first: float = 0.05,
                                   mat: np.ndarray | None = None) -> float | None:
     """
-    Луч от (x0,y0) под углом ang на max_dist.
-    Возвращает расстояние до ПЕРВОГО препятствия (м) или None.
-    skip_first — сколько метров от старта игнорируем (чтобы не увидеть себя).
+    Beam from (x0,y0) at an angle ang on max_dist.
+    Returns the distance to the FIRST obstacle (m) or None.
+    skip_first — how many meters from the start we ignore (so as not to see ourselves).
     """
     if mat is None:
         mat = minimap_matrix(n)
     cell_m = MAP_SIZE_M / n
-    step = cell_m * 0.5  # полклетки — надёжно
+    step = cell_m * 0.5  # half a cell - reliable
     t = max(step, skip_first)
     while t <= max_dist:
         x = x0 + t * math.cos(ang)
@@ -391,23 +390,23 @@ def _free_distance_in_direction(x0: float, y0: float, ang: float,
                                 max_dist: float, n: int = 48,
                                 mat: np.ndarray | None = None) -> float:
     """
-    Сколько метров свободно по направлению ang (0..max_dist), по сетке миникарты.
+    How many meters are free in the direction ang (0..max_dist), on the minimap grid.
     """
     hit = _ray_first_hit_distance_world(x0, y0, ang, max_dist, n=n, skip_first=0.0, mat=mat)
     return max_dist if hit is None else max(0.0, hit)
 # ---------- GRID A* + FOLLOW ----------
 
 def _mat_idx_to_world(mx: int, my: int, n: int) -> tuple[float, float]:
-    """Инверсия _world_to_mat_idx: центр клетки (mx,my) -> мировые (x,y)."""
+    """Inversion _world_to_mat_idx: cell center (mx,my) -> world (x,y)."""
     half = MAP_SIZE_M * 0.5
     cell = MAP_SIZE_M / float(n)
 
-    # матрица minimap_matrix — перевёрнута по Y (flipud), откатываем:
+    # matrix minimap_matrix — upside down Y (flipud), roll back:
     gx = mx
     gy = (n - 1) - my
 
-    xr = (gy + 0.5) * cell - half   # вперёд робота, м
-    yr = (gx + 0.5) * cell - half   # влево робота, м
+    xr = (gy + 0.5) * cell - half   # forward robot, m
+    yr = (gx + 0.5) * cell - half   # left robot, m
 
     rx, ry = float(d.qpos[0]), float(d.qpos[1])
     yaw = _quat_yaw(*d.qpos[3:7]) if MAP_FOLLOW_YAW else 0.0
@@ -418,7 +417,7 @@ def _mat_idx_to_world(mx: int, my: int, n: int) -> tuple[float, float]:
 
 
 def _inflate_occupancy(mat: np.ndarray, r: int) -> np.ndarray:
-    """Надуть препятствия на r клеток (манхэттен-круг). 1/2 → препятствие, 0 → свободно."""
+    """Inflate obstacles on r cells (Manhattan circle). 1/2 → let, 0 → free."""
     if r <= 0:
         return (mat == 1).astype(np.uint8)
     n = mat.shape[0]
@@ -429,7 +428,7 @@ def _inflate_occupancy(mat: np.ndarray, r: int) -> np.ndarray:
         y0 = max(0, y - r); y1 = min(n - 1, y + r)
         x0 = max(0, x - r); x1 = min(n - 1, x + r)
         out[y0:y1+1, x0:x1+1] = 1
-    # робот (2) считаем свободным
+    # robot (2) is considered free
     out[(mat == 2)] = 0
     return out
 
@@ -441,7 +440,7 @@ def _neighbors8(x: int, y: int):
 
 def _a_star(start: tuple[int,int], goal: tuple[int,int], occ: np.ndarray,
             avoid_corner_cut: bool = True) -> list[tuple[int,int]] | None:
-    """A* на сетке occ (1 — стена). 8-связность, запрещаем «резать углы» возле стен."""
+    """A* on the grid occ (1 — wall). 8-connectivity, we prohibit “cutting corners” near walls."""
     n = occ.shape[0]
     sx, sy = start
     gx, gy = goal
@@ -463,7 +462,7 @@ def _a_star(start: tuple[int,int], goal: tuple[int,int], occ: np.ndarray,
     while openq:
         _, gc, (x, y) = heapq.heappop(openq)
         if (x, y) == (gx, gy):
-            # восстановить путь
+            # restore the path
             path = [(x, y)]
             while came[(x, y)] is not None:
                 x, y = came[(x, y)]
@@ -476,7 +475,7 @@ def _a_star(start: tuple[int,int], goal: tuple[int,int], occ: np.ndarray,
                 continue
             if occ[ny, nx] == 1:
                 continue
-            # запрет corner-cut: если диагональ, два смежных кардинальных должны быть свободны
+            # ban corner-cut: if diagonal, two adjacent cardinals must be free
             if avoid_corner_cut and nx != x and ny != y:
                 if occ[y, nx] == 1 or occ[ny, x] == 1:
                     continue
@@ -494,8 +493,8 @@ def _segment_is_clear(x0: float, y0: float, x1: float, y1: float,
                       n: int, occ: np.ndarray,
                       inflate_cells: int = 0,
                       skip_first_m: float = 0.02) -> bool:
-    """Проверка видимости по миру, опираясь на сетку occ."""
-    # используем существующий трейс по миру → сетка
+    """Checking visibility around the world based on a grid occ."""
+    # we use an existing trace around the world → net
     cell = MAP_SIZE_M / float(n)
     step = max(cell * 0.5, 0.02)
     dist = math.hypot(x1 - x0, y1 - y0)
@@ -507,7 +506,7 @@ def _segment_is_clear(x0: float, y0: float, x1: float, y1: float,
         y = y0 + (y1 - y0) * (t / dist)
         mx, my = _world_to_mat_idx(x, y, n)
         if 0 <= mx < n and 0 <= my < n:
-            # локальное раздувание на проверке, чтобы не чесать бортом
+            # local inflation on check, so as not to scratch the side
             for dy in range(-inflate_cells, inflate_cells + 1):
                 for dx in range(-inflate_cells, inflate_cells + 1):
                     xx, yy = mx + dx, my + dy
@@ -520,14 +519,14 @@ def _segment_is_clear(x0: float, y0: float, x1: float, y1: float,
 def _simplify_world_path(points_world: list[tuple[float,float]],
                          n: int, occ: np.ndarray,
                          inflate_on_los: int = 1) -> list[tuple[float,float]]:
-    """Упростить ломаную: выбрасываем лишние точки, если отрезок виден."""
+    """Simplify the polyline: discard extra points if the segment is visible."""
     if len(points_world) <= 2:
         return points_world[:]
     out = [points_world[0]]
     i = 0
     while i < len(points_world) - 1:
         j = len(points_world) - 1
-        # от дальнего к ближнему ищем самую дальнюю видимую
+        # from far to near we are looking for the farthest visible
         while j > i + 1:
             if _segment_is_clear(points_world[i][0], points_world[i][1],
                                  points_world[j][0], points_world[j][1],
@@ -543,18 +542,18 @@ def go_to_xy_blocking(tx: float, ty: float, speed: float = 0.22,
                       stop: float = 0.30, slow_r: float = 0.70,
                       yaw_kp: float = 2.0, yaw_max_deg: float = 120.0,
                       n_map: int = 64,
-                      inflate_cells: int = 2,          # «толщина» робота в клетках
-                      replan_every: int = 90,          # иногда перепланируем (тика)
-                      los_inflate: int = 1):           # сколько расширять при проверке видимости
+                      inflate_cells: int = 2,          # «thickness" of the robot in cages
+                      replan_every: int = 90,          # sometimes we reschedule (tika)
+                      los_inflate: int = 1):           # how much to expand when checking visibility
     """
-    Планирование A* по миникарте и следование по упрощённым вейпоинтам.
-    Работает в координатах мира, но план строится в сетке minimap_matrix(n_map).
+    Planning A* on the minimap and following simplified waypoints.
+    Works in world coordinates, but the plan is built in a grid minimap_matrix(n_map).
     """
-    # 1) снимок карты и «раздутая» оккупация
+    # 1) snapshot of the map and the “inflated” occupation
     mat_raw = minimap_matrix(n_map)
     occ = _inflate_occupancy(mat_raw, inflate_cells)
 
-    # 2) старт/финиш клетки (робота разрешаем как свободную)
+    # 2) start/finish of the cage (we allow the robot to be free)
     rx, ry = float(d.qpos[0]), float(d.qpos[1])
     sx, sy = _world_to_mat_idx(rx, ry, n_map)
     gxw, gyw = snap_goal_to_free(tx, ty, n=n_map, inflate=1)
@@ -566,12 +565,12 @@ def go_to_xy_blocking(tx: float, ty: float, speed: float = 0.22,
         print("[goto/a*] no path")
         return
 
-    # 4) → мир + упрощение прямыми видимостями
+    # 4) → world + simplification by direct lines of sight
     pts_world = [_mat_idx_to_world(x, y, n_map) for (x, y) in path]
     pts_world = _simplify_world_path(pts_world, n_map, occ, inflate_on_los=los_inflate)
 
     print(f"[goto/a*] grid len={len(path)}  waypoints={len(pts_world)}")
-    # 5) трекинг вейпоинтов
+    # 5) waypoint tracking
     stop_stance_hold(); clear_abort()
     yaw_max = math.radians(yaw_max_deg)
 
@@ -580,7 +579,7 @@ def go_to_xy_blocking(tx: float, ty: float, speed: float = 0.22,
     dist0 = max(1e-6, math.hypot(tx - rx, ty - ry))
 
     while not glfw.window_should_close(window) and not _should_abort():
-        # цель — текущий вейпоинт или финальная точка
+        # target - current waypoint or final point
         gx, gy = pts_world[wp_i] if wp_i < len(pts_world) else (gxw, gyw)
 
         rx, ry = float(d.qpos[0]), float(d.qpos[1])
@@ -605,7 +604,7 @@ def go_to_xy_blocking(tx: float, ty: float, speed: float = 0.22,
         cmd[:] = [vxb, vyb, yaw_rate]
         step_once(render=True)
 
-        # иногда перепланируем на свежей карте (если мир динамический)
+        # sometimes we reschedule on a fresh map (if the world is dynamic)
         if (counter - last_plan_counter) >= replan_every:
             last_plan_counter = counter
             mat_raw = minimap_matrix(n_map)
@@ -616,8 +615,8 @@ def go_to_xy_blocking(tx: float, ty: float, speed: float = 0.22,
             if path:
                 pts_world = _simplify_world_path([_mat_idx_to_world(x, y, n_map) for (x, y) in path],
                                                  n_map, occ, inflate_on_los=los_inflate)
-                wp_i = 0  # начинаем с ближайшего к себе
-                # продвинем индекс к ближайшему видимому
+                wp_i = 0  # we start with the one closest to us
+                # move the index to the nearest visible one
                 for k in range(len(pts_world)-1):
                     if _segment_is_clear(rx, ry, pts_world[k][0], pts_world[k][1], n_map, occ, inflate_cells=los_inflate):
                         wp_i = k
@@ -645,7 +644,7 @@ def _minimap_collect_geom_ids() -> list[int]:
         if gtype == mj.mjtGeom.mjGEOM_PLANE:
             continue
 
-        # пропустим геомы робота
+        # let's skip the robot geoms
         body_id = int(m.geom_bodyid[gid])
         if _ROBOT_BODY_TREE and body_id in _ROBOT_BODY_TREE:
             continue
@@ -680,17 +679,17 @@ def _draw_filled_polygon(img: np.ndarray, pts: list[tuple[int,int]], rgb=(80,80,
                 img[yy, xL:xR+1, :] = rgb
 
 def _box_corners_world_xy(gid: int) -> list[tuple[float,float]]:
-    """4 угла следа mjGEOM_BOX в мировой плоскости XY (упорядочены без самопересечений)."""
-    sz = np.array(m.geom_size[gid], dtype=float)  # (sx, sy, sz) — ПОЛУразмеры
-    R  = np.array(d.geom_xmat[gid]).reshape(3,3)  # мировая ориентация геома
-    p  = np.array(d.geom_xpos[gid], dtype=float)  # центр
+    """4 track angle mjGEOM_BOX in the world plane XY (ordered without self-intersections)."""
+    sz = np.array(m.geom_size[gid], dtype=float)  # (sx, sy, sz) — HALF sizes
+    R  = np.array(d.geom_xmat[gid]).reshape(3,3)  # geom world orientation
+    p  = np.array(d.geom_xpos[gid], dtype=float)  # center
 
-    # локальные полуоси X,Y, спроецированные в XY мира
+    # local semi-axes X,Y, projected into XY peace
     ux = R[:2, 0] * sz[0]
     vy = R[:2, 1] * sz[1]
     c  = p[:2]
 
-    # 4 вершины по часовой
+    # 4 peaks clockwise
     return [
         (c[0] + ux[0] + vy[0], c[1] + ux[1] + vy[1]),
         (c[0] - ux[0] + vy[0], c[1] - ux[1] + vy[1]),
@@ -704,18 +703,18 @@ def _world_poly_to_grid(poly_xy: list[tuple[float,float]], n: int) -> list[tuple
 
 def snap_goal_to_free(tx: float, ty: float, n: int = 48, inflate: int = 1) -> tuple[float, float]:
     """
-    Если цель попала в препятствие — переносим на ближайшую свободную клетку.
-    Важно: minimap_matrix() внутри переворачивает по Y, поэтому тут явно учитываем flip.
-    Работает в БАЗОВОМ разрешении сетки (MAP_CELL_M), чтобы избежать рассинхрона масштабов.
+    If the target hits an obstacle, we move it to the nearest free cell.
+    Important: minimap_matrix() turns over inside Y, so we clearly take into account here flip.
+    Works in BASIC grid resolution (MAP_CELL_M), to avoid scale desynchronization.
     """
-    # --- базовое количество клеток, как в _minimap_build_image() ---
+    # --- base number of cells, as in _minimap_build_image() ---
     base_n = int(MAP_SIZE_M / MAP_CELL_M)
     base_n = max(32, min(1024, base_n))
 
-    # матрица оккупации в базной сетке (0—своб., 1—препятс., 2—робот), уже flipud
-    mat = minimap_matrix(base_n)   # shape=(base_n, base_n), flipped по Y
+    # occupation matrix in the base grid (0—free, 1—obstacle, 2—robot), already flipud
+    mat = minimap_matrix(base_n)   # shape=(base_n, base_n), flipped By Y
 
-    # world -> grid (неперевёрнутая сетка "unflipped")
+    # world -> grid (non-inverted mesh "unflipped")
     gx_u, gy_u = _world_to_grid(tx, ty, base_n)
     gx_u = int(np.clip(gx_u, 0, base_n - 1))
     gy_u = int(np.clip(gy_u, 0, base_n - 1))
@@ -724,24 +723,24 @@ def snap_goal_to_free(tx: float, ty: float, n: int = 48, inflate: int = 1) -> tu
     mx0, my0 = gx_u, (base_n - 1 - gy_u)
 
     def _is_free(mx: int, my: int) -> bool:
-        """Свободна ли клетка c учётом надувания inflate (0/1/2; 2=робот считаем свободным)."""
+        """Is the cell free? c taking into account inflation inflate (0/1/2; 2=We consider the robot free)."""
         nloc = mat.shape[0]
         for yy in range(max(0, my - inflate), min(nloc - 1, my + inflate) + 1):
             for xx in range(max(0, mx - inflate), min(nloc - 1, mx + inflate) + 1):
                 v = int(mat[yy, xx])
-                if v == 1:  # препятствие
+                if v == 1:  # let
                     return False
-        return True  # 0 или 2 — ок
+        return True  # 0 or 2 - ok
 
     occ0 = int(mat[my0, mx0])
    # print(f"[snap] check world=({tx:.3f},{ty:.3f}) -> grid=({gx_u},{gy_u}) -> mat=({mx0},{my0}) occ={occ0}")
 
-    # уже свободно — ничего не делаем
+    # already free - we do nothing
     if _is_free(mx0, my0):
     #    print("[snap] already FREE — keep original target")
         return tx, ty
 
-    # BFS по матрице (в координатах mat, т.е. с переворотом по Y)
+    # BFS according to the matrix (in coordinates mat, those. with a flip over Y)
 
     seen = np.zeros_like(mat, dtype=bool)
     q = deque([(mx0, my0, 0)])  # (mx, my, rings)
@@ -756,11 +755,11 @@ def snap_goal_to_free(tx: float, ty: float, n: int = 48, inflate: int = 1) -> tu
             gx_f = mx
             gy_f = (base_n - 1 - my)
 
-            # grid(unflipped) -> world (инверсия _world_to_grid с базной ячейкой)
+            # grid(unflipped) -> world (inversion _world_to_grid with base cell)
             half = MAP_SIZE_M * 0.5
             cell = MAP_CELL_M
-            xr = (gy_f + 0.5) * cell - half   # вперёд (ось робота)
-            yr = (gx_f + 0.5) * cell - half   # влево  (ось робота)
+            xr = (gy_f + 0.5) * cell - half   # forward (robot axis)
+            yr = (gx_f + 0.5) * cell - half   # left (robot axis)
 
             rx, ry = float(d.qpos[0]), float(d.qpos[1])
             yaw = _quat_yaw(*d.qpos[3:7]) if MAP_FOLLOW_YAW else 0.0
@@ -774,7 +773,7 @@ def snap_goal_to_free(tx: float, ty: float, n: int = 48, inflate: int = 1) -> tu
           #        f"rings={rings}, shift={dist:.3f}m")
             return wx, wy
 
-        # 8-соседей
+        # 8-neighbors
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):
                 if dx == 0 and dy == 0:
@@ -787,18 +786,18 @@ def snap_goal_to_free(tx: float, ty: float, n: int = 48, inflate: int = 1) -> tu
 # ---------------------------------------------------------------------------
 
 def _minimap_build_image() -> np.ndarray:
-    """Собираем картинку миникарты (RGB uint8), сверху—вниз (потом перевернём)."""
+    """Assembling the minimap picture (RGB uint8), from top to bottom (then we’ll turn it over)."""
     n = int(MAP_SIZE_M / MAP_CELL_M)
-    n = max(32, min(1024, n))  # разумные пределы
+    n = max(32, min(1024, n))  # reasonable limits
     img = np.full((n, n, 3), MAP_BG, dtype=np.uint8)
 
-    # рамка (1 пиксель по периметру)
+    # frame (1 pixel around the perimeter)
     img[0, :, :] = 0
     img[-1, :, :] = 0
     img[:, 0, :] = 0
     img[:, -1, :] = 0
 
-    # объекты (по геомам)
+    # objects (by geomes)
     geom_ids = _minimap_collect_geom_ids()
     for gid in geom_ids:
         x, y = d.geom_xpos[gid][0], d.geom_xpos[gid][1]
@@ -808,27 +807,27 @@ def _minimap_build_image() -> np.ndarray:
         sz    = np.array(m.geom_size[gid])
 
         if gtype == mj.mjtGeom.mjGEOM_BOX and sz.size >= 2:
-            poly_xy = _box_corners_world_xy(gid)     # 4 угла в мире
-            poly_px = _world_poly_to_grid(poly_xy, n)  # в пиксели карты
+            poly_xy = _box_corners_world_xy(gid)     # 4 corner in the world
+            poly_px = _world_poly_to_grid(poly_xy, n)  # to map pixels
             _draw_filled_polygon(img, poly_px, (MAP_OBJ_COL, MAP_OBJ_COL, MAP_OBJ_COL))
         else:
             r_m = float(np.max(sz[:2])) if sz.size else 0.05
             r_px = max(1, int(r_m / MAP_CELL_M))
             _draw_disc(img, gx, gy, r_px, (MAP_OBJ_COL, MAP_OBJ_COL, MAP_OBJ_COL))
 
-    # робот (позиция + стрелка курса)
-       # робот — всегда в центре миникарты
+    # robot (position + course arrow)
+       # robot is always in the center of the minimap
     cx = n // 2
     cy = n // 2
     _draw_disc(img, cx, cy, 2, MAP_ROBOT_COL)
 
-    # круг «зона 3 м»
+    # circle "zone 3 m"»
     zone_px = max(1, int(MAP_RADIUS_M / MAP_CELL_M))
     _draw_ring(img, cx, cy, zone_px, MAP_ZONE_COL, thickness=2)
 
-    # стрелка курса: при MAP_FOLLOW_YAW карта уже повернута по курсу,
-    # поэтому стрелку рисуем «вверх» (стабильно и читабельно).
-    L = 8  # длина стрелки в клетках
+    # course arrow: at MAP_FOLLOW_YAW the map is already rotated according to the course,
+    # so we draw an arrow “up” (stable and readable).
+    L = 8  # arrow length in cells
     tipx = cx
     tipy = cy - L
     steps = max(abs(tipx - cx), abs(tipy - cy), 1)
@@ -839,11 +838,11 @@ def _minimap_build_image() -> np.ndarray:
 
 
     return img
-# Один раз вычислим множество body_id робота (его поддерево)
+# Let's calculate the set once body_id robot (its subtree)
 _ROBOT_BODY_TREE: set[int] | None = None
 
 def _build_robot_body_tree() -> set[int]:
-    # ищем free-joint с qposadr==0 — базу робота
+    # looking for free-joint With qposadr==0 — robot base
     base_jid = -1
     for j in range(m.njnt):
         if m.jnt_type[j] == mj.mjtJoint.mjJNT_FREE and m.jnt_qposadr[j] == 0:
@@ -854,7 +853,7 @@ def _build_robot_body_tree() -> set[int]:
 
     root_bid = int(m.jnt_bodyid[base_jid])
 
-    # таблица детей для обхода
+    # children's table for crawling
     parent = np.array(m.body_parentid, dtype=int)
     nbody = int(m.nbody)
     children: list[list[int]] = [[] for _ in range(nbody)]
@@ -877,12 +876,12 @@ def _build_robot_body_tree() -> set[int]:
 def minimap_matrix(n: int = 48):
     img = _resize_nn(_minimap_build_image(), n, n)  # n×n RGB
 
-    # препятствия — только пиксели цвета объектов (MAP_OBJ_COL)
+    # obstacles - only pixels of object color (MAP_OBJ_COL)
     obj_mask = np.all(img == MAP_OBJ_COL, axis=2)
     rob_mask = np.all(img == MAP_ROBOT_COL, axis=2)
 
     mat = obj_mask.astype(np.uint8)
-    mat[rob_mask] = 2  # робот помечается отдельным классом
+    mat[rob_mask] = 2  # the robot is marked with a separate class
 
     return np.flipud(mat)
 
@@ -905,55 +904,55 @@ def draw_minimap_overlay(screen_w: int, screen_h: int):
         MINIMAP_PX, MINIMAP_PX
     )
 
-    # рисуем в окно
+    # draw out the window
     mj.mjr_setBuffer(mj.mjtFramebuffer.mjFB_WINDOW, context)
 
-    # Фон (без context в этой версии MuJoCo)
+    # Background (without context in this version MuJoCo)
     try:
         mj.mjr_rectangle(rect, 0.0, 0.0, 0.0, 0.6)
     except TypeError:
-        # на всякий случай — другие версии требуют context
+        # just in case - other versions require context
         mj.mjr_rectangle(rect, 0.0, 0.0, 0.0, 0.6, context)
 
-    # Пиксели миникарты (эта функция контекст принимает всегда)
+    # Minimap pixels (this function always accepts context)
     mj.mjr_drawPixels(rgb_buf, None, rect, context)
 
 # =========================
 # Saving helpers
 # =========================
-# === Wavefront (Lee) на локальной миникарте ===
+# === Wavefront (Lee) on the local minimap ===
 
 _NEIGH8 = [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)]
 _NEIGH4 = [(0,-1),(1,0),(0,1),(-1,0)]
 
 def _world_to_mat_idx(x: float, y: float, n: int) -> tuple[int, int]:
     """
-    Мировые (x,y) -> индексы в матрице minimap_matrix(n).
-    ВАЖНО: используем размер клетки = MAP_SIZE_M / n, а не фиксированный MAP_CELL_M.
-    Учитываем поворот карты (MAP_FOLLOW_YAW) и flipud() в minimap_matrix().
+    World (x,y) -> indexes in the matrix minimap_matrix(n).
+    IMPORTANT: we use the cage size = MAP_SIZE_M / n, not fixed MAP_CELL_M.
+    Taking into account the rotation of the map (MAP_FOLLOW_YAW) And flipud() V minimap_matrix().
     """
-    # центр окна в метрах от робота
+    # window center meters from the robot
     half = MAP_SIZE_M * 0.5
 
-    # позиция и курс робота
+    # robot position and heading
     rx, ry = float(d.qpos[0]), float(d.qpos[1])
     qw, qx, qy, qz = d.qpos[3:7]
     yaw = _quat_yaw(qw, qx, qy, qz) if MAP_FOLLOW_YAW else 0.0
 
-    # в систему робота
+    # into the robot system
     dx, dy = x - rx, y - ry
     ca, sa = math.cos(-yaw), math.sin(-yaw)
-    xr = ca * dx - sa * dy   # "вперёд" робота
-    yr = sa * dx + ca * dy   # "влево"  робота
+    xr = ca * dx - sa * dy   # "forward" robot
+    yr = sa * dx + ca * dy   # "left" robot
 
-    # размер клетки текущей матрицы n×n
+    # current matrix cell size n×n
     cell = MAP_SIZE_M / float(n)
 
-    # индексы до переворота
+    # pre-coup indices
     gx = int((yr + half) / cell)
     gy = int((xr + half) / cell)
 
-    # матрица из minimap_matrix(n) перевёрнута по Y (flipud)
+    # matrix of minimap_matrix(n) upside down Y (flipud)
     mx = int(np.clip(gx,        0, n - 1))
     my = int(np.clip((n - 1) - gy, 0, n - 1))
     return mx, my
@@ -990,7 +989,7 @@ def _current_angle_str(j: int) -> str:
     return "-"  # BALL/FREE
 
 def build_current_pose_tables() -> str:
-    # мягкая проверка готовности модели/данных
+    # soft check of model readiness/data
     if m is None or d is None:
         return "[WARN] current pose unavailable: model/data not initialized"
 
@@ -1044,7 +1043,7 @@ GAIT_ACT_IDS = []
 
 def build_gait_act_ids():
     na = num_actions
-    # какие суставы читает политика из qpos[7:7+na] (в нужном порядке)
+    # which joints does politics read from qpos[7:7+na] (in the right order)
     gait_joint_names = [mj.mj_id2name(m, mj.mjtObj.mjOBJ_JOINT, j)
                         for j in range(m.njnt)
                         if m.jnt_type[j] in (mj.mjtJoint.mjJNT_HINGE, mj.mjtJoint.mjJNT_SLIDE)
@@ -1079,17 +1078,17 @@ def build_allowed_joints_from_model(m: mj.MjModel) -> set[str]:
 def build_joint_index_map(joint_map: Dict[str, int],
                           preferred_order: List[str] | None = None) -> Dict[int, str]:
     """
-    Возвращает индекс→имя для формата из 8 углов:
-      0..3: левое плечо (pitch, roll, yaw), левый локоть (одна ось — предпочтительно pitch)
-      4..7: правое плечо (pitch, roll, yaw), правый локоть (одна ось — предпочтительно pitch)
+    Returns the index→name for 8 corner format:
+      0..3: left shoulder (pitch, roll, yaw), left elbow (one axis - preferably pitch)
+      4..7: right shoulder (pitch, roll, yaw), right elbow (one axis - preferably pitch)
 
-    Для каждого слота пробуем:
-      (1) точное совпадение,
-      (2) уникальный суффикс,
-      (3) эвристику по подстрокам.
-    Работает с префиксами имён (r1_, r2_, ...).
+    For each slot we try:
+      (1) exact match,
+      (2) unique suffix,
+      (3) substring heuristic.
+    Works with name prefixes (r1_, r2_, ...).
     """
-    # Описания слотов: (человекочитаемое_имя, список альтернатив, эвристика)
+    # Slot descriptions: (human readable_name, list of alternatives, heuristics)
     SLOTS = [
         ("left_shoulder_pitch_joint",
          ["left_shoulder_pitch_joint"],                            {"must": ["left", "shoulder", "pitch"]}),
@@ -1097,7 +1096,7 @@ def build_joint_index_map(joint_map: Dict[str, int],
          ["left_shoulder_roll_joint"],                             {"must": ["left", "shoulder", "roll"]}),
         ("left_shoulder_yaw_joint",
          ["left_shoulder_yaw_joint"],                              {"must": ["left", "shoulder", "yaw"]}),
-        ("left_elbow_joint",      # предпочтительно pitch-вариант
+        ("left_elbow_joint",      # preferably pitch-option
          ["left_elbow_joint", "left_elbow_pitch_joint"],           {"must": ["left", "elbow"], "prefer": ["pitch"]}),
 
         ("right_shoulder_pitch_joint",
@@ -1106,7 +1105,7 @@ def build_joint_index_map(joint_map: Dict[str, int],
          ["right_shoulder_roll_joint"],                            {"must": ["right", "shoulder", "roll"]}),
         ("right_shoulder_yaw_joint",
          ["right_shoulder_yaw_joint"],                             {"must": ["right", "shoulder", "yaw"]}),
-        ("right_elbow_joint",     # предпочтительно pitch-вариант
+        ("right_elbow_joint",     # preferably pitch-option
          ["right_elbow_joint", "right_elbow_pitch_joint"],         {"must": ["right", "elbow"], "prefer": ["pitch"]}),
     ]
 
@@ -1115,11 +1114,11 @@ def build_joint_index_map(joint_map: Dict[str, int],
     all_names = list(joint_map.keys())
 
     def _resolve_by_alts(alts: list[str]) -> str | None:
-        # точное имя
+        # exact name
         for a in alts:
             if a in joint_map:
                 return a
-        # уникальный суффикс
+        # unique suffix
         for a in alts:
             hits = [n for n in all_names if n.endswith(a)]
             if len(hits) == 1:
@@ -1129,7 +1128,7 @@ def build_joint_index_map(joint_map: Dict[str, int],
     def _resolve_by_heuristic(hints: dict) -> str | None:
         must = [s.lower() for s in hints.get("must", [])]
         prefer = [s.lower() for s in hints.get("prefer", [])]
-        # кандидаты по обязательным подстрокам
+        # candidates by required substrings
         cands = []
         for n in all_names:
             low = n.lower()
@@ -1137,14 +1136,14 @@ def build_joint_index_map(joint_map: Dict[str, int],
                 cands.append(n)
         if not cands:
             return None
-        # если есть «предпочтительные» токены — выбираем по ним
+        # if there are “preferred” tokens, select them
         pref = [n for n in cands if any(t in n.lower() for t in prefer)] if prefer else []
         if len(pref) == 1:
             return pref[0]
         if pref:
-            # если несколько — берём самый «короткий» (обычно это нужный pitch)
+            # if there are several, we take the “shortest” one (usually this is the required pitch)
             return sorted(pref, key=len)[0]
-        # иначе берём самый короткий из must-кандидатов
+        # otherwise we take the shortest one must-candidates
         return sorted(cands, key=len)[0]
 
     for human_name, alts, hints in SLOTS:
@@ -1400,8 +1399,8 @@ def parse_command(command: str, rag_k: int = 5, rag_csv: str = "1000.csv", rag_j
             norm["name"] = nm
 
         # 7) allow alt field names for x,y,speed
-        #    (на случай если придёт tx/ty или vx/vy — мягко игнорируем,
-        #     но x/y/speed оставляем как основной интерфейс)
+        #    (in case he comes tx/ty or vx/vy — gently ignore,
+        #     But x/y/speed leave it as the main interface)
         if "tx" in norm and "x" not in norm:
             norm["x"] = norm.pop("tx")
         if "ty" in norm and "y" not in norm:
@@ -1495,36 +1494,36 @@ Below are guidelines: pairs of “command example → target JSON”. Strictly f
     command_cache[command] = normalized
     return normalized
 
-# === STANCE: шаги на месте (RL включён) ===
+# === STANCE: steps in place (RL included) ===
 STANCE_HOLD = False
-STANCE_V = 0.12                  # целевая амплитуда по главной оси
-STANCE_AXIS = "x"                # "x" или "y"
+STANCE_V = 0.12                  # target principal axis amplitude
+STANCE_AXIS = "x"                # "x" or "y"
 STANCE_STEPS_EACH = 1
 _stance_dir = +1
 _stance_local = 0
 
-# Главная ось (ритм ±V + PI на ошибку позиции)
-STANCE_KP = 1.0                  # м/(с·м)
-STANCE_KD = 0.3                  # м/с на м/с
-STANCE_KI = 0.2                  # м/(с·м·с) — интегральная убирает остаточный дрейф
-STANCE_I_CLAMP = 0.3             # ограничение интегратора (в "эквиваленте" м)
+# Main axis (rhythm ±V + PI for position error)
+STANCE_KP = 1.0                  # m/(With·m)
+STANCE_KD = 0.3                  # m/from to m/With
+STANCE_KI = 0.2                  # m/(With·m·c) — integral removes residual drift
+STANCE_I_CLAMP = 0.3             # integrator limitation (in "equivalent" m)
 
-# Поперечная ось (без ритма, только подавление дрейфа)
+# Cross axis (no rhythm, drift suppression only)
 STANCE_ORTH_KP = 1.2
 STANCE_ORTH_KD = 0.25
 
-# Удержание курса (yaw → 0 относительно старта стойки)
-STANCE_YAW_KP = 2.0              # рад/с на рад
-STANCE_YAW_KD = 0.2              # рад/с на рад/с
+# Staying on course (yaw → 0 relative to the start of the stance)
+STANCE_YAW_KP = 2.0              # glad/from to rad
+STANCE_YAW_KD = 0.2              # glad/from to rad/With
 
 STANCE_HOME = None               # np.array([x0, y0])
-STANCE_YAW_HOME = None           # float (рад)
+STANCE_YAW_HOME = None           # float (glad)
 
-# внутренние состояния контроллера
-STANCE_I_MAIN = 0.0              # интегральная сумма по главной оси
+# controller internal states
+STANCE_I_MAIN = 0.0              # integral sum along the principal axis
 
 def start_stance_hold(v: float = 0.12, axis: str = "x", steps_each: int = 1):
-    """Включить стойку: ритм ±V + PI по главной оси, подавление дрейфа по поперечной оси, удержание yaw."""
+    """Enable Rack: Rhythm ±V + PI main axis, lateral axis drift suppression, hold yaw."""
     global STANCE_HOLD, STANCE_V, STANCE_AXIS, STANCE_STEPS_EACH
     global _stance_dir, _stance_local, steps_needed, steps_done
     global STANCE_HOME, STANCE_YAW_HOME, STANCE_I_MAIN
@@ -1538,34 +1537,34 @@ def start_stance_hold(v: float = 0.12, axis: str = "x", steps_each: int = 1):
     steps_needed = 0
     steps_done = 0
 
-    # Запоминаем «дом»
+    # Remember "home"»
     STANCE_HOME = np.array([float(d.qpos[0]), float(d.qpos[1])], dtype=np.float32)
 
-    # Запоминаем курс в старте стойки
+    # Remembering the course at the start of the stance
     qw, qx, qy, qz = d.qpos[3:7]
     STANCE_YAW_HOME = _quat_yaw(qw, qx, qy, qz)
 
-    # Сбрасываем интегратор
+    # Resetting the integrator
     STANCE_I_MAIN = 0.0
 
-    # Стартовая команда — нулевая: контроллер задаст в цикле
+    # The starting command is zero: the controller will set it in a cycle
     cmd[:] = 0.0
 
 def stop_stance_hold():
-    """Выключить стойку на месте."""
+    """Turn off the rack in place."""
     global STANCE_HOLD
     STANCE_HOLD = False
     cmd[:] = 0.0
 
-# для детекции шага по sin(phase)
+# for step detection sin(phase)
 PHASE_SIN = 0.0
 PHASE_PREV_SIN = 0.0
 def render_once(minimap: bool = True):
-    # 1) обработать события и применить WASD к камере
+    # 1) process events and apply WASD to the camera
     glfw.poll_events()
     update_camera_from_input()
 
-    # 2) отрисовать сцену
+    # 2) render the scene
     w, h = glfw.get_framebuffer_size(window)
     viewport = mj.MjrRect(0, 0, w, h)
     mj.mjv_updateScene(m, d, opt, None, cam, mj.mjtCatBit.mjCAT_ALL, scene)
@@ -1609,7 +1608,7 @@ def apply_upper_pd():
         d.ctrl[aid] = float(np.clip(u, lo, hi))
 
 def policy_tick():
-    """Обновляет obs → action → target_dof_pos. Вызывайте разреженно по decimation."""
+    """Updates obs → action → target_dof_pos. Call sparsely by decimation."""
     global action, target_dof_pos, PHASE_SIN, PHASE_PREV_SIN
     if counter % control_decimation != 0:
         return
@@ -1642,7 +1641,7 @@ def policy_tick():
     PHASE_PREV_SIN, PHASE_SIN = PHASE_SIN, sinp
 
 def step_once(render: bool = True) -> bool:
-    """Один полный тик: PD ног, PD рук, mj_step, policy_tick, (опц.) render."""
+    """One full tick: PD legs, PD hands, mj_step, policy_tick, (opt.) render."""
     global counter
     if _should_abort():
         d.ctrl[:] = 0.0
@@ -1718,19 +1717,19 @@ def get_gravity_orientation(quaternion):
 # === GLOBAL ABORT ===
 RUN_ABORT = False
 def clear_abort():
-    """Сбрасываем аварийный флаг перед СТАРТОМ новых движений."""
+    """Reset the emergency flag before STARTING new movements."""
     global RUN_ABORT
     RUN_ABORT = False
 
 def _should_abort() -> bool:
-    # общий быстрый чек во всех циклах
+    # general quick check in all cycles
     return RUN_ABORT or (window is not None and glfw.window_should_close(window))
 
 def abort_all_motion():
-    """Запросить аварийную остановку всего, что сейчас крутится."""
+    """Request an emergency stop of everything that is currently spinning."""
     global RUN_ABORT, steps_needed, steps_done, cmd, target_dof_pos, action, short_extra_done, last_activity_time
     RUN_ABORT = True
-    # обнуляем всё управление походкой/руками
+    # reset all gait controls/hands
     steps_needed = 0
     steps_done = 0
     cmd[:] = 0.0
@@ -1739,12 +1738,12 @@ def abort_all_motion():
         target_dof_pos = default_angles.copy()
     if ARM_TARGETS is not None and len(ARM_TARGETS) > 0:
         ARM_TARGETS[:] = 0.0
-    # немедленно глушим актуаторы
+    # immediately turn off the actuators
     d.ctrl[:] = 0.0
     d.qacc[:] = 0.0
     d.qvel[:] = 0.0
     mj.mj_forward(m, d)
-    # чтобы не стартовал автобаланс
+    # so that auto balance does not start
     short_extra_done = True
     last_activity_time = time.time()
 
@@ -1753,8 +1752,8 @@ def pd_control(target_q, q, kp, target_dq, dq, kd):
     """PD control law."""
     return (target_q - q) * kp + (target_dq - dq) * kd
 def hard_reset(reload_model: bool = False, reload_policy: bool = True):
-    """Полный ресет. По желанию — перезагрузка XML и/или политики."""
-    abort_all_motion()  # единый экстренный стоп + обнуление всего управления
+    """Full reset. Reboot optional XML And/or politics."""
+    abort_all_motion()  # single emergency stop + resetting all controls
 
     global m, d, scene, context, opt
     global policy, INIT_QPOS
@@ -1762,7 +1761,7 @@ def hard_reset(reload_model: bool = False, reload_policy: bool = True):
     global counter, old_sin_phase, short_extra_done, last_activity_time
     global steps_needed, steps_done, cmd, action, target_dof_pos
 
-    # 1) при необходимости перезагрузить модель/контекст
+    # 1) reload the model if necessary/context
     if reload_model:
         m = mj.MjModel.from_xml_path(xml_path)
         d = mj.MjData(m)
@@ -1771,11 +1770,11 @@ def hard_reset(reload_model: bool = False, reload_policy: bool = True):
         context = mj.MjrContext(m, mj.mjtFontScale.mjFONTSCALE_100)
         opt = mj.MjvOption()
 
-    # 2) при необходимости перезагрузить политику
+    # 2) reload the policy if necessary
     if reload_policy:
         policy = torch.jit.load(policy_path)
 
-    # 3) пересобрать зависящие от модели структуры
+    # 3) rebuild model-dependent structures
     ALLOWED_JOINTS = build_allowed_joints_from_model(m)
     joint_map = {mj.mj_id2name(m, mj.mjtObj.mjOBJ_JOINT, j) or f"joint_{j}": m.jnt_qposadr[j]
                  for j in range(m.njnt)}
@@ -1789,9 +1788,9 @@ def hard_reset(reload_model: bool = False, reload_policy: bool = True):
     auto_tune_upper_kp()
 
     GAIT_ACT_IDS = build_gait_act_ids()
-    assert set(GAIT_ACT_IDS).isdisjoint(ARM_ACT_IDS), "пересечение актуаторов рук и походки!"
+    assert set(GAIT_ACT_IDS).isdisjoint(ARM_ACT_IDS), "intersection of arm and gait actuators!"
 
-    # 4) жёсткий физический ресет и инициализация буферов
+    # 4) hard physical reset and buffer initialization
     mj.mj_resetData(m, d)
     mj.mj_forward(m, d)
     INIT_QPOS = d.qpos.copy()
@@ -1803,28 +1802,28 @@ def hard_reset(reload_model: bool = False, reload_policy: bool = True):
 
     counter = 0
     old_sin_phase = 0.0
-    short_extra_done = True          # как у тебя было в hard_reset
+    short_extra_done = True          # how was it with you hard_reset
     last_activity_time = time.time()
 
     print("[HARD RESET] model:", "reloaded" if reload_model else "kept",
           "| policy:", "reloaded" if reload_policy else "kept")
 
-    clear_abort()  # снимаем аварийный флаг, можно снова двигаться
+    clear_abort()  # remove the emergency flag, you can move again
     return
 
 
 def do_reset():
-    """Мягкий ресет: база -> INIT_QPOS, все суставы в ноль, без перезагрузки модели/политики."""
-    abort_all_motion()  # стоп всего, обнуление управляющих сигналов
+    """Soft reset: base -> INIT_QPOS, all joints to zero, without rebooting the model/politicians."""
+    abort_all_motion()  # stop everything, reset control signals
 
     global counter, old_sin_phase, short_extra_done, last_activity_time
     global target_dof_pos
 
-    # Полный сброс состояния и возврат базы в исходную позу
+    # Complete reset of the state and return of the base to its original position
     mj.mj_resetData(m, d)
     d.qpos[:] = INIT_QPOS
 
-    # Нулим все не-free суставы; BALL -> единичный кватернион
+    # Let's not lose everything-free joints; BALL -> unit quaternion
     for j in range(m.njnt):
         jtype = m.jnt_type[j]; adr = m.jnt_qposadr[j]
         if jtype in (mj.mjtJoint.mjJNT_HINGE, mj.mjtJoint.mjJNT_SLIDE):
@@ -1834,10 +1833,10 @@ def do_reset():
 
     mj.mj_forward(m, d)
 
-    # Счётчики/флаги
+    # Counters/flags
     counter = 0
     old_sin_phase = 0.0
-    short_extra_done = False         # как у тебя было в do_reset
+    short_extra_done = False         # how was it with you do_reset
     target_dof_pos = default_angles.copy()
     last_activity_time = time.time()
 
@@ -1862,7 +1861,7 @@ def move_joints_by_name(joints_list, duration_per_frame=0.3, fps=60):
          - {"frame": [{"name": "<joint>", "angle": <deg>}, ...], "duration": <sec optional>}  # SIMULTANEOUS
          - {"name": "walk", "num": <int>, "dir_deg": <float>, "spd": <float>}
          - {"name": "goto", "x": <m>, "y": <m>, "speed": <m/s>, ["stop": <m>, "slow_r": <m>, "yaw_kp": <>, "yaw_max_deg": <>]}
-        — идти к мировой точке (X,Y); speed и доп.поля опциональны.
+        — go to the world point (X,Y); speed and additional fields are optional.
 
     """
     global last_activity_time
@@ -1955,7 +1954,7 @@ def move_joints_by_name(joints_list, duration_per_frame=0.3, fps=60):
                     print(f"Empty or invalid 'frame' in item: {item}")
                     continue
 
-                # Разделяем: цели для рук (через PD) и для остальных (прямо в qpos)
+                # Dividing: Hand Targets (via PD) and for the rest (directly in qpos)
                 arm_goals = {}
                 direct_targets = {}
                 for j in joints:
@@ -1981,7 +1980,7 @@ def move_joints_by_name(joints_list, duration_per_frame=0.3, fps=60):
                 duration = float(item.get("duration", duration_per_frame))
                 n_steps = max(1, int(duration * fps))
 
-                # Стартовые значения
+                # Starting values
                 start_arm = {jn: float(ARM_TARGETS[ARM_NAME_TO_IDX[jn]]) for jn in arm_goals.keys()}
                 start_angles = {jn: d.qpos[joint_map[jn]] for jn in direct_targets.keys()}
 
@@ -1991,17 +1990,17 @@ def move_joints_by_name(joints_list, duration_per_frame=0.3, fps=60):
                         return
                     t = smoothstep((step + 1) / n_steps)
 
-                    # РУКИ: плавно ведём PD-цели
+                    # HANDS: smoothly lead PD-goals
                     for jname, goal in arm_goals.items():
                         idx = ARM_NAME_TO_IDX[jname]
                         ARM_TARGETS[idx] = (1 - t) * start_arm[jname] + t * goal
 
-                    # ПРОЧЕЕ: как раньше — напрямую в qpos
+                    # OTHER: as before - directly to qpos
                     for jname, target_rad in direct_targets.items():
                         start_rad = start_angles[jname]
                         d.qpos[joint_map[jname]] = (1 - t) * start_rad + t * target_rad
 
-                    # --- дать поработать PD по рукам (мини-шаги физики) ---
+                    # --- let it work PD hands-on (mini-steps of physics) ---
                     for _ in range(substeps_per_render):
                         if _should_abort():
                             print("[ABORT] single-joint/substep")
@@ -2040,7 +2039,7 @@ def move_joints_by_name(joints_list, duration_per_frame=0.3, fps=60):
                     t = smoothstep((step + 1) / n_steps)
                     ARM_TARGETS[idx] = (1 - t) * start + t * target_angle_rad
 
-                    # даём PD-контролю рук поработать внутри каждого шага интерполяции
+                    # we give PD-hand control work inside each interpolation step
                     for _ in range(substeps_per_render):
                         _control_step_with_arms()
                     render_once(minimap=True)
@@ -2132,13 +2131,13 @@ def key_callback(window_, key, scancode, action, mods):
         run_turn_blocking(ang, spd)
 
     elif key == glfw.KEY_R and pressed:
-                   # <- ВАЖНО: сначала просим остановку
+                   # <- IMPORTANT: please stop first
         do_reset()
                    
 
 
     elif key == glfw.KEY_H and pressed:
-                # <- сначала стоп всего
+                # <- first stop everything
         hard_reset(reload_model=True, reload_policy=True)
         auto_tune_upper_kp()
                 
@@ -2148,7 +2147,7 @@ def key_callback(window_, key, scancode, action, mods):
     elif key == glfw.KEY_P and pressed:
         cmd_list = open_paste_window()
         if cmd_list:
-            clear_abort()               # ← добавьте
+            clear_abort()               # ← add
             move_joints_by_name(cmd_list)
     # 'L' — natural language command -> parsed JSON actions -> execute
     elif key == glfw.KEY_L and pressed:
@@ -2234,11 +2233,11 @@ def cursor_pos_callback(window_, xpos, ypos):
         cam.elevation -= sensitivity * dy
         last_cursor_pos = (xpos, ypos)
 
-# где-то рядом с глобалами
+# somewhere near the globals
 CAMERA_SPEED = 0.2
 
 def update_camera_from_input():
-    """Применить WASD + стрелки к cam.lookat."""
+    """Apply WASD + arrows to cam.lookat."""
     global cam, movement, CAMERA_SPEED
     if cam is None or not movement:
         return
@@ -2268,28 +2267,28 @@ def scroll_callback(window_, x_offset, y_offset):
 # =========================
 
 if __name__ == "__main__":
-    # ---- 0) аргументы ----
+    # ---- 0) arguments ----
     parser = argparse.ArgumentParser()
     parser.add_argument("--rag-k", type=int, default=5)
     parser.add_argument("--rag-csv", default="1000.csv")
     parser.add_argument("--rag-json", default="data_action")
     parser.add_argument("--robot", choices=["g1", "h1", "h1_2"], default="g1")
-    parser.add_argument("--xml", help="xml scene")
+    parser.add_argument("--xml", help="xml scene", default="scene.xml")
     args = parser.parse_args()
 
-    # RAG-настройки для L/В/Г горячих клавиш
+    # RAG-settings for L/IN/G hot keys
     settings.RAG_K = args.rag_k
     settings.RAG_CSV = args.rag_csv
     settings.RAG_JSON = args.rag_json
 
-    # ---- 1) файлы под выбранного робота ----
+    # ---- 1) files for the selected robot ----
     name_ = args.robot
     scene_file = args.xml
     config_file = f"unitree_rl_gym/deploy/deploy_mujoco/configs/{name_}.yaml"
     policy_path = f"unitree_rl_gym/deploy/pre_train/{name_}/motion.pt"
     xml_path    = f"unitree_rl_gym/resources/robots/{name_}/{scene_file}"
 
-    # ---- 2) конфиг → глобали ----
+    # ---- 2) config → globals ----
     with open(config_file, "r", encoding="utf-8") as f:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -2306,13 +2305,13 @@ if __name__ == "__main__":
     num_actions         = cfg["num_actions"]
     num_obs             = cfg["num_obs"]
 
-    # ---- 3) MuJoCo модель/данные ----
+    # ---- 3) MuJoCo model/data ----
     m = mj.MjModel.from_xml_path(xml_path)
     d = mj.MjData(m)
     m.opt.timestep = simulation_dt
     mj.mj_forward(m, d)
 
-    # карты имён суставов и разрешённых суставов
+    # maps of joint names and allowed joints
     ALLOWED_JOINTS = build_allowed_joints_from_model(m)
     joint_map = {mj.mj_id2name(m, mj.mjtObj.mjOBJ_JOINT, j) or f"joint_{j}": m.jnt_qposadr[j]
                  for j in range(m.njnt)}
@@ -2322,18 +2321,18 @@ if __name__ == "__main__":
     ]
     joint_index_map = build_joint_index_map(joint_map, PREFERRED_FRAME_ORDER)
 
-    # ---- 4) PD верхней части (привязка актуаторов) ----
-    setup_arm_pd(zero_pose=UPPER_HOLD_ZERO)   # создаёт ARM_* массивы
-    auto_tune_upper_kp()                      # подстраивает Kp/Kd по bias’у
+    # ---- 4) PD upper part (binding of actuators) ----
+    setup_arm_pd(zero_pose=UPPER_HOLD_ZERO)   # creates ARM_* arrays
+    auto_tune_upper_kp()                      # adjusts Kp/Kd By bias’at
 
-    # ---- 5) какие актуаторы трогает походка ----
-    GAIT_ACT_IDS = build_gait_act_ids()       # требует m, num_actions
-    assert set(GAIT_ACT_IDS).isdisjoint(ARM_ACT_IDS), "пересечение актуаторов рук и походки!"
+    # ---- 5) what actuators are touched by gait? ----
+    GAIT_ACT_IDS = build_gait_act_ids()       # requires m, num_actions
+    assert set(GAIT_ACT_IDS).isdisjoint(ARM_ACT_IDS), "intersection of arm and gait actuators!"
 
-    # ---- 6) политика ----
+    # ---- 6) policy ----
     policy = torch.jit.load(policy_path)
 
-    # ---- 7) окно и визуализация ----
+    # ---- 7) window and visualization ----
     glfw.init()
     window = glfw.create_window(1200, 900, "MuJoCo Manual Viewer", None, None)
     glfw.make_context_current(window)
@@ -2350,7 +2349,7 @@ if __name__ == "__main__":
     glfw.set_cursor_pos_callback(window, cursor_pos_callback)
     glfw.set_scroll_callback(window, scroll_callback)
 
-    # ---- 8) рабочие буферы/счётчики ----
+    # ---- 8) working buffers/counters ----
     INIT_QPOS = d.qpos.copy()
     steps_needed = 0
     steps_done   = 0
@@ -2363,7 +2362,7 @@ if __name__ == "__main__":
     last_activity_time = time.time()
     short_extra_done = False
 
-    # ---- главный цикл ----
+    # ---- main loop ----
     while not glfw.window_should_close(window):
         step_once(render=True)
     glfw.terminate()

@@ -1,0 +1,107 @@
+[
+
+
+      {
+        "frame": [
+          { "name": "r1_left_elbow_pitch_joint", "angle": 12 },
+          { "name": "r1_right_elbow_pitch_joint", "angle": 12 },
+          { "name": "r2_left_elbow_pitch_joint", "angle": 12 },
+          { "name": "r2_right_elbow_pitch_joint", "angle": 12 }
+        ],
+        "duration": 0.5
+      },
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": -30 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 30 },
+          { "name": "r2_left_shoulder_yaw_joint", "angle": -30 },
+          { "name": "r2_right_shoulder_yaw_joint", "angle": 30 }
+        ],
+        "duration": 0.5
+      },
+      {
+        "frame": [
+          { "name": "r1_left_elbow_pitch_joint", "angle": -12 },
+          { "name": "r1_right_elbow_pitch_joint", "angle": -12 },
+          { "name": "r2_left_elbow_pitch_joint", "angle": -12 },
+          { "name": "r2_right_elbow_pitch_joint", "angle": -12 }
+        ],
+        "duration": 0.5
+      },
+
+ {
+    "parallel": [
+      { "name": "walk", "robot": "r1", "deg": 90, "spd": 0.8, "num": 3 },
+      { "name": "walk", "robot": "r2", "deg": -90, "spd": 0.8, "num": 3 },
+      { "name": "walk", "robot": "r3", "deg": 180, "spd": 0.3, "num": 2 }
+    ]
+  },
+
+ {
+    "parallel": [
+      { "name": "rotate", "robot": "r1", "deg": 5, "spd_deg_s": 90, "num": 1 },
+      { "name": "rotate", "robot": "r2", "deg": -35, "spd_deg_s": 90, "num": 1 }
+    ]
+  },
+   
+  {
+    "parallel": [
+      { "name": "walk", "robot": "r1", "deg": 0, "spd": 0.6, "num": 3 },
+      { "name": "walk", "robot": "r2", "deg": 0, "spd": 0.6, "num": 3 }
+    ]
+  },
+
+
+      {
+        "frame": [
+          { "name": "r1_left_elbow_pitch_joint", "angle": 12 },
+          { "name": "r1_right_elbow_pitch_joint", "angle": 12 },
+          { "name": "r2_left_elbow_pitch_joint", "angle": 12 },
+          { "name": "r2_right_elbow_pitch_joint", "angle": 12 }
+        ],
+        "duration": 0.5
+      },
+      {
+        "frame": [
+          { "name": "r1_left_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r1_right_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r2_left_shoulder_yaw_joint", "angle": 0 },
+          { "name": "r2_right_shoulder_yaw_joint", "angle": 0 }
+        ],
+        "duration": 0.5
+      },
+  
+
+ 
+
+  {
+    "parallel": [
+      { "name": "walk", "robot": "r1", "deg": 180, "spd": 0.3, "num": 3 },
+      { "name": "walk", "robot": "r2", "deg": 180, "spd": 0.3, "num": 3 }
+    ]
+  },
+   
+
+      {
+        "frame": [
+          { "name": "r3_right_shoulder_pitch_joint", "angle": -80 },
+          { "name": "r3_right_shoulder_roll_joint", "angle": -40 },
+          { "name": "r3_right_shoulder_yaw_joint", "angle": -15 },
+          { "name": "r3_right_elbow_pitch_joint", "angle": 10 },
+
+          { "name": "r3_R_thumb_proximal_yaw_joint", "angle": 45 },
+          { "name": "r3_R_thumb_proximal_pitch_joint", "angle": 18 },
+          { "name": "r3_R_thumb_intermediate_joint", "angle": 28 },
+          { "name": "r3_R_thumb_distal_joint", "angle": 22 },
+
+          { "name": "r3_R_index_proximal_joint", "angle": 55 },
+          { "name": "r3_R_index_intermediate_joint", "angle": 50 },
+
+          { "name": "r3_R_middle_proximal_joint", "angle": 15 },
+          { "name": "r3_R_middle_intermediate_joint", "angle": 10 },
+          { "name": "r3_R_ring_proximal_joint", "angle": 15 },
+          { "name": "r3_R_ring_intermediate_joint", "angle": 10 },
+          { "name": "r3_R_pinky_proximal_joint", "angle": 15 },
+          { "name": "r3_R_pinky_intermediate_joint", "angle": 10 }]
+      }
+]

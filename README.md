@@ -1,19 +1,45 @@
 # ANY_ROBOT
 
+
+
 ## How to launch
+
 ```bash
-uv run any_robot.py --robot g1
+pip install uv
 ```
 
-[g1, h1_2] - avaible options
+```bash
+uv run any_robot.py --robot h1_2
+```
+[g1, h1_2, h1] - avaible options (better if h1_2 or g1)
+
+- Voice control 2 robots: 
+Key V to launch the dialog with realtime llm
+```bash
+uv run any_ag_micro.py
+```
+
+- 3 twin-robots: 
+
+```bash
+uv run any_3h1_2.py
+```
+
+- The best version with avoiding obstacles by A*: 
+
+```bash
+uv run any_robots_map.py
+```
+
+
 
 ## How does it works?
 
-VLM получает  промпт с полным описанием робота, значениями и наименованиями текущих суставов и командой которую задал пользователь на естественном языке.
+VLM receives a prompt with a full description of the robot, the values and names of the current joints, and a command given by the user in natural language.
 
-VLM возвращает json массив с джоинтами и значениями углов на которые их установить. 
+VLM returns a json array with the joints and the angle values to set them to. 
 
-Например: по команде "Подними правую руку вверх" ожидается что-то вроде:
+For example: the command "Raise your right hand up" is expected to do something like:
 
 ```json
 [

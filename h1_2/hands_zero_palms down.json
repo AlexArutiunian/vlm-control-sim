@@ -1,0 +1,15 @@
+[
+
+
+{
+"frame": [
+
+{"name": "left_hand", "angle":40},
+{"name": "right_hand", "angle":-40}
+
+],
+"duration": 0.6
+
+
+}
+]

@@ -1,0 +1,104 @@
+[
+  {
+    "parallel": [
+      {
+        "frame": [
+          {"name": "r2_left_shoulder_pitch", "angle": -28.6},
+          {"name": "r2_left_shoulder_roll", "angle": -3.4},
+          {"name": "r2_left_shoulder_yaw", "angle": 0.0},
+          {"name": "r2_left_elbow", "angle": 34.9},
+          {"name": "r2_right_shoulder_pitch", "angle": -27.8},
+          {"name": "r2_right_shoulder_roll", "angle": 2.0},
+          {"name": "r2_right_shoulder_yaw", "angle": 0.0},
+          {"name": "r2_right_elbow", "angle": 33.8}
+        ],
+        "duration": 0.6
+      },
+      {
+        "frame": [
+          {"name": "r1_left_shoulder_pitch", "angle": -28.6},
+          {"name": "r1_left_shoulder_roll", "angle": -3.4},
+          {"name": "r1_left_shoulder_yaw", "angle": 0.0},
+          {"name": "r1_left_elbow", "angle": 34.9},
+          {"name": "r1_right_shoulder_pitch", "angle": -27.8},
+          {"name": "r1_right_shoulder_roll", "angle": 2.0},
+          {"name": "r1_right_shoulder_yaw", "angle": 0.0},
+          {"name": "r1_right_elbow", "angle": 33.8}
+        ],
+        "duration": 0.6
+      }
+    ]
+  },
+  {
+    "parallel": [
+      {"robot": "r2", "name": "turn", "deg": 110, "spd_deg_s": 60},
+      {"robot": "r1", "name": "turn", "deg": -110, "spd_deg_s": 60}
+    ]
+  },
+  {
+    "parallel": [
+      {"robot": "r2", "name": "walk", "num": 2, "dir_deg": 0.0, "spd": 0.5},
+      {"robot": "r1", "name": "walk", "num": 2, "dir_deg": 0.0, "spd": 0.5}
+    ]
+  },
+  {
+    "parallel": [
+      {
+        "frame": [
+          {"name": "r2_left_shoulder_pitch", "angle": -28.6},
+          {"name": "r2_left_shoulder_roll", "angle": -3.4},
+          {"name": "r2_left_shoulder_yaw", "angle": 0.0},
+          {"name": "r2_left_elbow", "angle": 44.9},
+          {"name": "r2_right_shoulder_pitch", "angle": -27.8},
+          {"name": "r2_right_shoulder_roll", "angle": 2.0},
+          {"name": "r2_right_shoulder_yaw", "angle": 0.0},
+          {"name": "r2_right_elbow", "angle": 43.8}
+        ],
+        "duration": 0.6
+      },
+      {
+        "frame": [
+          {"name": "r1_left_shoulder_pitch", "angle": -28.6},
+          {"name": "r1_left_shoulder_roll", "angle": -3.4},
+          {"name": "r1_left_shoulder_yaw", "angle": 0.0},
+          {"name": "r1_left_elbow", "angle": 44.9},
+          {"name": "r1_right_shoulder_pitch", "angle": -27.8},
+          {"name": "r1_right_shoulder_roll", "angle": 2.0},
+          {"name": "r1_right_shoulder_yaw", "angle": 0.0},
+          {"name": "r1_right_elbow", "angle": 43.8}
+        ],
+        "duration": 0.6
+      }
+    ]
+  },
+  {
+    "parallel": [
+      {
+        "frame": [
+          {"name": "r2_left_shoulder_pitch", "angle": 0},
+          {"name": "r2_left_shoulder_roll", "angle": 0},
+          {"name": "r2_left_shoulder_yaw", "angle": 0.0},
+          {"name": "r2_left_elbow", "angle": 0},
+          {"name": "r2_right_shoulder_pitch", "angle": 0},
+          {"name": "r2_right_shoulder_roll", "angle": 0.0},
+          {"name": "r2_right_shoulder_yaw", "angle": 0.0},
+          {"name": "r2_right_elbow", "angle": 0}
+        ],
+        "duration": 0.6
+      },
+      {
+        "frame": [
+          {"name": "r1_left_shoulder_pitch", "angle": 0},
+          {"name": "r1_left_shoulder_roll", "angle": 0},
+          {"name": "r1_left_shoulder_yaw", "angle": 0.0},
+          {"name": "r1_left_elbow", "angle": 0},
+          {"name": "r1_right_shoulder_pitch", "angle": 0},
+          {"name": "r1_right_shoulder_roll", "angle": 0.0},
+          {"name": "r1_right_shoulder_yaw", "angle": 0.0},
+          {"name": "r1_right_elbow", "angle": 0}
+        ],
+        "duration": 0.6
+      }
+    ]
+  }
+]

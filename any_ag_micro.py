@@ -40,23 +40,23 @@ except Exception:
 import os, json, base64, time, threading
 import numpy as np
 import sounddevice as sd
-import websocket  # пакет websocket-client
+import websocket  # plastic bag websocket-client
 import settings
 from queue import SimpleQueue
 from queue import Empty
 
 def process_action_queue():
-    # забираем все накопившиеся задания, исполняем по одному
+    # take all the accumulated tasks and complete them one by one
     while True:
         try:
-            actions = ACTION_QUEUE.get_nowait()  # не блокируемся
+            actions = ACTION_QUEUE.get_nowait()  # don't block
         except Empty:
             break
         if actions:
             try:
                 with EXEC_LOCK:
                     print(f"[EXEC] run {len(actions)} actions from queue")
-                    move_joints_by_name(actions)  # БЛОКИРУЕТ главный цикл на время движения
+                    move_joints_by_name(actions)  # BLOCKS the main cycle while moving
             except Exception as e:
                 print(f"[EXEC] error: {e}")
 
@@ -67,7 +67,7 @@ def enqueue_actions(actions):
     if actions:
         ACTION_QUEUE.put(actions)
 
-EXEC_LOCK = threading.Lock()  # если ещё не добавляли
+EXEC_LOCK = threading.Lock()  # if you haven't added it yet
 
 # =========================
 # Imports (extended)
@@ -75,7 +75,7 @@ EXEC_LOCK = threading.Lock()  # если ещё не добавляли
 # ... existing import ...
 from demo_player import load_commands_csv, load_actions_json  # Add functions from demo_player.py
 # =========================
-# === LLM ДИАЛОГ В ФОНЕ ===
+# === LLM DIALOGUE IN THE BACKGROUND ===
 # =========================
 import io
 import threading
@@ -85,7 +85,7 @@ import soundfile as sf
 import requests
 import openai
 
-# Ключ: берём из settings/окружения, при наличии — из secrets_keys (необязательно)
+# Key: take from settings/environment, if available - from secrets_keys (optional)
 try:
     from secrets_keys import OPENAI_KEY as _OPENAI_KEY_FALLBACK
 except Exception:
@@ -95,17 +95,17 @@ _OPENAI_KEY = getattr(settings, "OPENAI_API_KEY",
                       os.getenv("OPENAI_API_KEY", _OPENAI_KEY_FALLBACK or ""))
 
 if not _OPENAI_KEY:
-    print("[LLM] ВНИМАНИЕ: ключ OpenAI не задан (settings.OPENAI_API_KEY / env / secrets_keys.OPENAI_KEY)")
+    print("[LLM] ATTENTION: key OpenAI not specified (settings.OPENAI_API_KEY / env / secrets_keys.OPENAI_KEY)")
 
 client = openai.OpenAI(api_key=_OPENAI_KEY)
 
-# --------- Тихий ввод с микрофона (копия из твоего файла) ---------
+# --------- Quiet microphone input (copy from your file) ---------
 def _silence_alsa():
     try:
         from ctypes import cdll, CFUNCTYPE, c_char_p, c_int
         asound = cdll.LoadLibrary("libasound.so")
         CBFUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
-        def _noop(file, line, func, err, fmt):  # подавление спама ALSA
+        def _noop(file, line, func, err, fmt):  # spam suppression ALSA
             return
         asound.snd_lib_error_set_handler(CBFUNC(_noop))
     except Exception:
@@ -118,11 +118,11 @@ _DTYPE = "int16"
 
 def record_push_to_talk() -> bytes | None:
     """
-    Нажми Enter — старт записи, ещё раз Enter — стоп.
-    Возвращает WAV-байты.
-    Если вместо Enter введена команда, вернёт None (обработается ниже).
+    Click Enter — start recording again Enter — stop.
+    Returns WAV-bytes.
+    If instead Enter command entered will return None (will be processed below).
     """
-    print("\nНажмите Enter — старт записи, затем Enter — стоп. Для команд введите /help.")
+    print("\nClick Enter — start recording, then Enter — stop. For commands, enter /help.")
     line = input()
     if line.strip().startswith("/"):
         return None
@@ -136,7 +136,7 @@ def record_push_to_talk() -> bytes | None:
         buf.extend(indata)
 
     with sd.RawInputStream(samplerate=_SR, channels=_CH, dtype=_DTYPE, blocksize=0, callback=cb):
-        print("Запись... (Enter — стоп)")
+        print("Record... (Enter — stop)")
         input()
 
     if not buf:
@@ -148,13 +148,13 @@ def record_push_to_talk() -> bytes | None:
     with sf.SoundFile(bio, mode="w", samplerate=_SR, channels=_CH, format="WAV", subtype="PCM_16") as f:
         f.write(arr)
     if overflow:
-        print("[WARN] Обнаружен overflow входного буфера.")
+        print("[WARN] Detected overflow input buffer.")
     return bio.getvalue()
 
 def transcribe_wav_bytes(wav_bytes: bytes, api_key: str) -> str:
-    """STT: сначала gpt-4o-mini-transcribe, потом whisper-1 (копия из твоего файла)."""
+    """STT: at first gpt-4o-mini-transcribe, Then whisper-1 (copy from your file)."""
     if not api_key:
-        raise RuntimeError("OPENAI_KEY пуст.")
+        raise RuntimeError("OPENAI_KEY empty.")
     url = "https://api.openai.com/v1/audio/transcriptions"
     headers = {"Authorization": f"Bearer {api_key}"}
     for model in ("gpt-4o-mini-transcribe", "whisper-1"):
@@ -171,16 +171,16 @@ def transcribe_wav_bytes(wav_bytes: bytes, api_key: str) -> str:
             else:
                 print(f"[STT] {model}: {r.status_code} {r.text}")
         except Exception as e:
-            print(f"[STT] {model} ошибка: {e}")
+            print(f"[STT] {model} error: {e}")
     return ""
 
-# --------- Диалоговый клиент с вычленением JSON-действий ---------
+# --------- Conversational client with highlighting JSON-actions ---------
 class RobotDialogLLM:
     """
-    Держит историю диалога. На каждую реплику ассистента:
-      - пытается вытащить первый валидный JSON (массив/объект) через _extract_first_json()
-      - парсит в list[dict]
-      - enqueue_actions(actions) -> их выполнит главный цикл через process_action_queue()
+    Keeps the history of the dialogue. For each assistant’s response:
+      - tries to pull out the first valid one JSON (array/object) through _extract_first_json()
+      - parses in list[dict]
+      - enqueue_actions(actions) -> they will be executed by the main loop through process_action_queue()
     """
     def __init__(self, model: str = None):
         self.model = model or getattr(settings, "OPENAI_MODEL", "gpt-4o")
@@ -191,32 +191,28 @@ class RobotDialogLLM:
         if self.history and self.history[0].get("role") == "system":
             return
         system_prompt = (
-           "Отвечай кратко и по делу.  "
-            "Если уместно, включай ТОЛЬКО JSON с массивом действий суставов. "
-            "Если пользователь хочет просто поговорить - отвечай естественно и вежливо без JSON."
-            "Допустимые форматы действий: "
+           "Answer briefly and to the point.  "
+            "If appropriate, ONLY include JSON with an array of joint actions. "
+            "If the user just wants to talk, answer naturally and politely without JSON."
+            "Acceptable action formats: "
             "{\"name\":\"<joint>\",\"angle\":<deg>,\"duration\":<sec?>,\"robot\":\"r1_\"|\"r2_\"}, "
             "{\"frame\":[{\"name\":\"<joint>\",\"angle\":<deg>},...],\"duration\":<sec?>,\"robot\":\"...\"}, "
             "{\"name\":\"walk\",\"num\":<int>,\"dir_deg\":<float>,\"spd\":<float>,\"robot\":\"...\"}, "
             "{\"name\":\"turn\",\"deg\":<float>,\"spd_deg_s\":<float?>,\"robot\":\"...\"}. "
-            "Параллельность/повторы: для одновременных действий — {\"parallel\":[...]}; для повторов — {\"repeat\":[...],\"times\":<int>}. "
-            "Понимание суставов (основные): "
-            "«плечо» → shoulder_pitch/roll/yaw_joint, "
-            "«локоть» → elbow_pitch/roll_joint, elbow_pitch = 90 соответствует выпрямленной руке "
-            "«кисть» → wrist_pitch/yaw_joint, "
-            "«бедро» → hip_pitch/roll/yaw_joint, "
-            "«колено» → knee_joint, "
-            "«щиколотка» → ankle_pitch/roll_joint, "
-            "«туловище» → torso_joint. "
-            "Имя сустава всегда с префиксом r1_ или r2_ по роботу. "
-            "Например: r1_right_elbow_pitch_joint — правый локоть робота r1."
+            "Parallelism/repetitions: for simultaneous actions — {\"parallel\":[...]}; for replays — {\"repeat\":[...],\"times\":<int>}. "
+            "Understanding joints (basic): "
+            "shoulder» → shoulder_pitch/roll/yaw_joint, "
+            "«elbow» → elbow_pitch/roll_joint, elbow_pitch = -90 corresponds to a straight arm"
+   
+            "The joint name is always prefixed r1_ or r2_ by robot. "
+            "For example: r1_right_elbow_pitch_joint — robot right elbow r1."
 
         )
         self.history = [{"role": "system", "content": system_prompt}]
 
     def _send_and_get(self, user_text: str) -> str:
         self.history.append({"role": "user", "content": user_text})
-        # Сначала пробуем с max_completion_tokens (новые модели), при ошибке — без лимита
+        # First we try with max_completion_tokens (new models), if there is an error - no limit
         try:
             resp = client.chat.completions.create(
                 model=self.model,
@@ -224,7 +220,7 @@ class RobotDialogLLM:
                 max_completion_tokens=800
             )
         except Exception as e:
-            # повтор без лимита — совместимо со старыми/нестандартными билдами
+            # unlimited repeat - compatible with old ones/non-standard builds
             resp = client.chat.completions.create(
                 model=self.model,
                 messages=self.history
@@ -236,13 +232,13 @@ class RobotDialogLLM:
 
     def _try_extract_and_enqueue(self, text: str) -> bool:
         try:
-            js = _extract_first_json(text)      # твоя функция очистки/детекта первого JSON-блока
+            js = _extract_first_json(text)      # your cleanup function/first detection JSON-block
             data = json.loads(js)
             if isinstance(data, dict):
                 data = [data]
             if isinstance(data, list):
-                enqueue_actions(data)           # твоя очередь; выполнит move_joints_by_name()
-                print(f"[DIALOG] Взял {len(data)} действий из ответа LLM и отправил в очередь.")
+                enqueue_actions(data)           # your turn; will fulfill move_joints_by_name()
+                print(f"[DIALOG] Took it {len(data)} actions from response LLM and sent it to the queue.")
                 return True
         except Exception:
             pass
@@ -250,93 +246,93 @@ class RobotDialogLLM:
 
     def handle_text(self, user_text: str):
         reply = self._send_and_get(user_text)
-        print(f"Ассистент: {reply}")
+        print(f"Assistant: {reply}")
         self._try_extract_and_enqueue(reply)
 
     def loop_blocking(self):
         """
-        Бесконечная терминальная сессия: push-to-talk, команды /q /history /clear /t.
-        Не блокирует главный цикл — запускается в отдельном потоке.
+        Endless terminal session: push-to-talk, teams /q /history /clear /t.
+        Does not block the main loop - runs in a separate thread.
         """
-        print("Голосовой режим. Команды: /q — выход, /history — история, /clear — очистить, /t — ввод текстом, /help — справка.")
+        print("Voice mode. Teams: /q — exit, /history — story, /clear — clear, /t — text input, /help — reference.")
         self._ensure_system()
         while True:
             try:
                 wav = record_push_to_talk()
                 if wav is None:
-                    cmd = input("\nКоманда: ").strip().lower()
+                    cmd = input("\nTeam: ").strip().lower()
                     if cmd in ("/q", "/quit", "quit", "exit"):
-                        print("[DIALOG] Завершение диалогового потока.")
+                        print("[DIALOG] Ending a conversation thread.")
                         break
                     if cmd in ("/history", "/h"):
                         self._print_history(); continue
                     if cmd in ("/clear", "/c"):
-                        self._ensure_system(); print("История очищена"); continue
+                        self._ensure_system(); print("History cleared"); continue
                     if cmd in ("/t",):
-                        txt = input("Текст: ").strip()
+                        txt = input("Text: ").strip()
                         if txt:
                             self.handle_text(txt)
                         continue
                     if cmd in ("/help",):
-                        print("Команды: /q — выход, /history — история, /clear — очистить, /t — ввод текстом.")
+                        print("Teams: /q — exit, /history — story, /clear — clear, /t — text input.")
                         continue
-                    print("Неизвестная команда. Введите /help для списка.")
+                    print("Unknown team. Enter /help for list.")
                     continue
 
                 if not wav:
-                    print("Пустая запись.")
+                    print("Empty entry.")
                     continue
 
                 text = transcribe_wav_bytes(wav, _OPENAI_KEY)
                 if not text:
-                    print("Ничего не распознано.")
+                    print("Nothing recognized.")
                     continue
 
-                print(f"Вы (STT): {text}")
+                print(f"You (STT): {text}")
                 reply = self._send_and_get(text)
-                print(f"Ассистент: {reply}")
+                print(f"Assistant: {reply}")
                 self._try_extract_and_enqueue(reply)
 
             except KeyboardInterrupt:
-                print("\n[DIALOG] Прерывание пользователем")
+                print("\n[DIALOG] User interrupt")
                 break
             except Exception as e:
-                print(f"[DIALOG] Ошибка: {e}")
+                print(f"[DIALOG] Error: {e}")
 
     def _print_history(self):
         if len(self.history) <= 1:
-            print("История пуста")
+            print("History is empty")
             return
         print("\n" + "="*60)
-        print("История диалога:")
+        print("History of the dialogue:")
         print("="*60)
         for i, msg in enumerate(self.history[1:], 1):
-            role = "Вы" if msg["role"] == "user" else "Ассистент"
+            role = "You" if msg["role"] == "user" else "Assistant"
             print(f"{i}. {role}: {msg['content']}")
         print("="*60)
 
-# Глобальные хендлы фонового диалога
+# Global background dialog handles
 _DIALOG_THREAD = None
 _DIALOG = None
 
 def start_llm_dialog_thread():
-    """Запустить диалог с LLM в отдельном потоке (один раз)."""
+    """Start a dialogue with LLM in a separate thread (one time)."""
     global _DIALOG_THREAD, _DIALOG
     if _DIALOG_THREAD and _DIALOG_THREAD.is_alive():
-        print("[DIALOG] Уже запущен.")
+        print("[DIALOG] Already launched.")
         return
     _DIALOG = RobotDialogLLM()
     _DIALOG_THREAD = threading.Thread(target=_DIALOG.loop_blocking, daemon=True)
     _DIALOG_THREAD.start()
-    print("[DIALOG] Фоновый диалог запущен. Окно MuJoCo продолжает работать.")
+    print("[DIALOG] The background dialog is running. Window MuJoCo continues to work.")
 
 
 # --- Few-shot via cosine similarity (new) ---
 from sim_phrases import load_csv as load_cmds_csv, compute_similarities, DEFAULT_MODEL  # noqa
 class LLMRealtimeWSAgent:
     """
-    Потоковая транскрипция через OpenAI Realtime (WebSocket) + немедленное исполнение команд.
-    Без локального VAD: используем серверный turn detection + частые commit'ы.
+    Stream Transcription Via OpenAI Realtime (WebSocket) + immediate execution of commands.
+    Without local VAD: we use server turn detection + frequent commit's.
     """
     def __init__(self, samplerate=16000, chunk_ms=40, commit_ms=250):
         self.samplerate = samplerate
@@ -352,34 +348,34 @@ class LLMRealtimeWSAgent:
 
     # ---------- WS callbacks ----------
     def _on_open(self, ws):
-        # Настройка сессии: PCM16 вход, серверный VAD, входная транскрипция RU, и не говорим вслух.
+        # Session setup: PCM16 input, server VAD, input transcription RU, and don't speak out loud.
         cfg = {
             "type": "session.update",
             "session": {
-                "instructions": "Ты интерпретируешь голос оператора в текст команды. Ничего не озвучивай.",
+                "instructions": "You interpret the operator's voice into command text. Don't say anything.",
                 "input_audio_format": {"type": "pcm16", "sample_rate_hz": self.samplerate},
                 "turn_detection": {"type": "server_vad", "silence_duration_ms": 200},
                 "input_audio_transcription": {"model": "gpt-4o-mini-transcribe", "language": "ru"}
             }
         }
         ws.send(json.dumps(cfg))
-        # Запуск микрофона
+        # Triggering the microphone
         self.tx_thread = threading.Thread(target=self._mic_loop, daemon=True)
         self.tx_thread.start()
-        print("[RT] Подключено. Говорите...")
+        print("[RT] Connected. Speak...")
 
     def _on_message(self, ws, message):
-        # Ловим дельты транскрипции входа и финалы
+        # Catching deltas of entry transcription and finals
         try:
             msg = json.loads(message)
         except Exception:
             return
         t = msg.get("type", "")
-        # дельты текста входной транскрипции (названия событий могут меняться, читаем по полям)
+        # deltas of the text of the input transcription (names of events may change, read by fields)
         if ("transcript" in msg) and (t.endswith(".delta") or "input_audio_transcription" in t):
             self._buf_text += msg.get("transcript", "")
 
-        # конец сегмента: speech_stopped / completed / done — исполняем
+        # end of segment: speech_stopped / completed / done — perform
         if ("speech_stopped" in t) or ("completed" in t) or ("done" in t):
             text = (self._buf_text or msg.get("transcript", "")).strip()
             self._buf_text = ""
@@ -397,13 +393,13 @@ class LLMRealtimeWSAgent:
                     with EXEC_LOCK:
                         enqueue_actions(actions)
             except Exception as e:
-                print(f"[RT] Ошибка исполнения: {e}")
+                print(f"[RT] Execution error: {e}")
 
     def _on_error(self, ws, err):
-        print(f"[RT] Ошибка WS: {err}")
+        print(f"[RT] Error WS: {err}")
 
     def _on_close(self, ws, *args):
-        print("[RT] Соединение закрыто.")
+        print("[RT] Connection closed.")
 
     # ---------- MIC loop ----------
     def _mic_loop(self):
@@ -423,7 +419,7 @@ class LLMRealtimeWSAgent:
                 except Exception:
                     break
                 now = time.time()
-                # Частые коммиты буфера — сервер начнёт отдавать транскрипцию очень быстро
+                # Frequent buffer commits - the server will start sending transcription very quickly
                 if (now - self._last_commit) >= self.commit_ms:
                     try:
                         self.ws.send(json.dumps({"type": "input_audio_buffer.commit"}))
@@ -436,7 +432,7 @@ class LLMRealtimeWSAgent:
         if self.running:
             return
         if not self.api_key:
-            print("[RT] OPENAI_API_KEY пуст.")
+            print("[RT] OPENAI_API_KEY empty.")
             return
         self.running = True
         headers = [
@@ -466,9 +462,9 @@ class LLMRealtimeWSAgent:
 
 class LLMMicAgent:
     """
-    Push-to-talk агент:
-    - start(): начать запись микрофона (держим ПРОБЕЛ)
-    - stop_and_submit(): остановить запись и асинхронно: STT -> parse_command -> move_joints_by_name
+    Push-to-talk agent:
+    - start(): start recording microphone (hold SPACEBAR)
+    - stop_and_submit(): stop recording and asynchronously: STT -> parse_command -> move_joints_by_name
     """
     def __init__(self, samplerate: int = 16000, channels: int = 1):
         self.samplerate = samplerate
@@ -486,7 +482,7 @@ class LLMMicAgent:
 
     def start(self):
         if sd is None or sf is None:
-            print("[MIC] Нет sounddevice/soundfile. Установите: pip install sounddevice soundfile")
+            print("[MIC] No sounddevice/soundfile. Install: pip install sounddevice soundfile")
             return
         if self.recording:
             return
@@ -496,7 +492,7 @@ class LLMMicAgent:
         )
         self.stream.start()
         self.recording = True
-        print("[MIC] Говорите… Держите ПРОБЕЛ. Отпустите для отправки.")
+        print("[MIC] Speak... Hold SPACEBAR. Release to send.")
 
     def stop_and_submit(self):
         if not self.recording:
@@ -508,10 +504,10 @@ class LLMMicAgent:
             pass
         self.recording = False
         if not self.frames:
-            print("[MIC] Пустая запись, пропускаю.")
+            print("[MIC] Empty entry, I'm skipping it.")
             return
 
-        # Собираем WAV в память
+        # We collect WAV in memory
         bio = io.BytesIO()
         with sf.SoundFile(
             bio, mode="w", samplerate=self.samplerate, channels=self.channels, format="WAV", subtype="PCM_16"
@@ -524,10 +520,10 @@ class LLMMicAgent:
 
     def _stt(self, wav_bytes: bytes) -> str:
         if not self.api_key:
-            raise RuntimeError("OPENAI_API_KEY пуст — укажите в settings.py или переменной окружения.")
+            raise RuntimeError("OPENAI_API_KEY empty - indicate in settings.py or environment variable.")
         url = "https://api.openai.com/v1/audio/transcriptions"
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        # Быстрый стек: mini-transcribe -> whisper-1
+        # Fast stack: mini-transcribe -> whisper-1
         for model in ("gpt-4o-mini-transcribe", "whisper-1"):
             try:
                 r = requests.post(
@@ -542,17 +538,17 @@ class LLMMicAgent:
                 else:
                     print(f"[MIC] STT {model}: {r.status_code} {r.text}")
             except Exception as e:
-                print(f"[MIC] STT ошибка ({model}): {e}")
+                print(f"[MIC] STT error ({model}): {e}")
         return ""
 
     def _worker(self, wav_bytes: bytes):
         try:
             text = self._stt(wav_bytes)
         except Exception as e:
-            print(f"[MIC] STT ошибка: {e}")
+            print(f"[MIC] STT error: {e}")
             return
         if not text:
-            print("[MIC] Не распознано.")
+            print("[MIC] Not recognized.")
             return
 
         print(f"[MIC → TEXT] {text!r}")
@@ -566,7 +562,7 @@ class LLMMicAgent:
             print("[VOICE ACTIONS]", actions)
             enqueue_actions(actions)
         except Exception as e:
-            print(f"[MIC] Ошибка выполнения команды: {e}")
+            print(f"[MIC] Command execution error: {e}")
 
 
 # --- RAG block builder (text few-shots) ---
@@ -889,15 +885,15 @@ def _append_reject(
             time.strftime("%Y-%m-%d %H:%M:%S"),
         ])
 def _resolve_joint_name(jname: str) -> str | None:
-    """Подбирает имя сустава с учётом суффикса _joint и префиксов r1_/r2_."""
+    """Selects the name of the joint taking into account the suffix _joint and prefixes r1_/r2_."""
     if jname in joint_map:
         return jname
-    # пробуем без суффикса "_joint"
+    # try without suffix "_joint"
     if jname.endswith("_joint"):
         base = jname[:-6]
         if base in joint_map:
             return base
-    # если в JSON пришёл без префикса, а в сцене он есть
+    # if in JSON came without a prefix, but there is one in the scene
     for pref in ("r1_", "r2_"):
         cand = pref + jname
         if cand in joint_map:
@@ -1205,11 +1201,11 @@ def build_current_pose_tables() -> str:
     return "\n".join(lines)
 
 # ======= OBJECTS / DISTANCES / MINIMAP =======
-OBJECT_PREFIXES = ("box_", "cube_", "target_", "obj_")  # расширяй по своим названиям
+OBJECT_PREFIXES = ("box_", "cube_", "target_", "obj_")  # expand by your names
 OBJECTS: dict[str, dict] = {}      # name -> {"type": "geom", "pos": np.ndarray(3)}
 DIST: dict[str, dict[str, float]] = {}  # robot -> {object -> distance}
 MINIMAP: dict[str, Any] = {}       # {"center": np.ndarray(3), "cell": float, "grid": list[list[list[str]]]}
-MINIMAP_CELL = 1.0                 # 1м клетка
+MINIMAP_CELL = 1.0                 # 1m cell
 MINIMAP_SIZE = 3                   # 3x3
 
 def _geom_pos(name: str) -> np.ndarray | None:
@@ -1222,12 +1218,12 @@ def _geom_pos(name: str) -> np.ndarray | None:
         return None
 
 def get_robot_world_pos(p: str) -> np.ndarray:
-    """xyz центра базового фри-джойнта робота p ('r1_', 'r2_', ...)."""
+    """xyz center of the robot's basic free-joint p ('r1_', 'r2_', ...)."""
     mp = R[p]
     return d.qpos[mp["base_qpos_adr"] : mp["base_qpos_adr"]+3].copy()
 
 def discover_objects(prefixes: tuple[str, ...] = OBJECT_PREFIXES) -> dict[str, dict]:
-    """Сканирует все геомы и берёт те, чьи имена начинаются с prefixes."""
+    """Scans all geoms and takes those whose names begin with prefixes."""
     out = {}
     for i in range(m.ngeom):
         nm = mj.mj_id2name(m, mj.mjtObj.mjOBJ_GEOM, i) or ""
@@ -1239,7 +1235,7 @@ def discover_objects(prefixes: tuple[str, ...] = OBJECT_PREFIXES) -> dict[str, d
     return out
 
 def update_world_index() -> None:
-    """Обнови список объектов и матрицу расстояний."""
+    """Update the list of objects and distance matrix."""
     global OBJECTS, DIST
     OBJECTS = discover_objects()
     DIST = {p: {} for p in (R.keys())}
@@ -1247,14 +1243,14 @@ def update_world_index() -> None:
         rp = get_robot_world_pos(p)
         for nm, meta in OBJECTS.items():
             op = meta["pos"]
-            # горизонтальная дистанция XY (для навигации так удобнее); хочешь — поставь 3D
+            # horizontal distance XY (it’s more convenient for navigation); if you want, put it 3D
             dist = float(np.linalg.norm(op[:2] - rp[:2]))
             DIST[p][nm] = dist
 
 def build_minimap(center: np.ndarray, size: int = MINIMAP_SIZE, cell: float = MINIMAP_CELL) -> dict:
     """
-    Возвращает структуру с 3×3 клетками и списками объектов по клеткам.
-    Центр — (x,y) в мире, сетка осевая.
+    Returns a structure with 3×3 cells and lists of objects by cell.
+    Center — (x,y) in the world, axial mesh.
     """
     half = size // 2
     grid = [[[] for _ in range(size)] for __ in range(size)]
@@ -1263,13 +1259,13 @@ def build_minimap(center: np.ndarray, size: int = MINIMAP_SIZE, cell: float = MI
         x, y = meta["pos"][:2]
         ix = int(np.floor((x - (cx - half*cell)) / cell))
         iy = int(np.floor((y - (cy - half*cell)) / cell))
-        # координаты в пределах 0..size-1
+        # coordinates within 0..size-1
         if 0 <= ix < size and 0 <= iy < size:
-            grid[size-1-iy][ix].append(nm)  # инвертируем y, чтобы «верх» был сверху
+            grid[size-1-iy][ix].append(nm)  # invert y, so that the “top” is on top
     return {"center": center.copy(), "cell": cell, "size": size, "grid": grid}
 
 def render_minimap_to_text(mm: dict) -> str:
-    """ASCII-миникарта: в клетке показываем количество объектов (или первый символ названия)."""
+    """ASCII-minimap: in a cell we show the number of objects (or the first character of the name)."""
     lines = []
     lines.append(f"MiniMap {mm['size']}x{mm['size']} (cell={mm['cell']}m), center=({mm['center'][0]:.2f},{mm['center'][1]:.2f})")
     for row in mm["grid"]:
@@ -1278,7 +1274,7 @@ def render_minimap_to_text(mm: dict) -> str:
             if not objs:
                 cells.append(" . ")
             else:
-                # покажем количество (или, если хочешь, objs[0][:1])
+                # we will show the quantity (or, if you want, objs[0][:1])
                 n = len(objs)
                 cells.append(f"{n:2d} ")
         lines.append("".join(cells))
@@ -1322,7 +1318,7 @@ def _append_minimap_to_prompt(txt: str, user_cmd: str | None = None) -> str:
 
 
 def distances_summary_text() -> str:
-    """Короткая табличка расстояний (сортировано по объектам для каждого робота)."""
+    """Short distance table (sorted by objects for each robot)."""
     if not DIST:
         return "(no distances yet)"
     lines = ["[Distances robot→object (XY, m)]"]
@@ -1333,17 +1329,17 @@ def distances_summary_text() -> str:
     return "\n".join(lines)
 
 def guess_target_object_from_text(text: str) -> str | None:
-    """Пробуем найти в тексте имя известного объекта (простое совпадение по подстроке, без регистра)."""
+    """We try to find the name of a known object in the text (a simple substring match, without case)."""
     t = text.lower()
-    # точное совпадение по известным именам
+    # exact match for famous names
     by_name = [nm for nm in OBJECTS.keys() if nm.lower() in t]
     if by_name:
-        # если несколько — возьмём самое длинное (обычно более специфичное)
+        # if there are several, we’ll take the longest one (usually more specific)
         return sorted(by_name, key=len, reverse=True)[0]
-    # fallback: по префиксам (например 'box', 'cube', 'target')
+    # fallback: by prefixes (for example 'box', 'cube', 'target')
     for pref in ("box", "cube", "target", "obj"):
         if pref in t:
-            # выберем ближайший к активному роботу
+            # choose the one closest to the active robot
             p0 = ACTIVE if ACTIVE in DIST else next(iter(DIST.keys()))
             cands = [nm for nm in OBJECTS.keys() if nm.lower().startswith(pref)]
             if cands:
@@ -1386,7 +1382,7 @@ def _normalize_robots(sel=None) -> list[str]:
         if not s.endswith("_"):
             s += "_"
         return [s] if s in R else []
-    # список
+    # list
     out = []
     for x in sel:
         xs = str(x).strip().lower()
@@ -1396,26 +1392,26 @@ def _normalize_robots(sel=None) -> list[str]:
             out.append(xs)
     return out
 
-# ==== ADD (глобальные настройки) ====
-IDLE_AFTER = 5   # сек тишины до «заморозки»
-IDLE_SLEEP = 0.05  # интервал ожидания в паузе
-# ==== ADD (утилиты рядом с _one_tick) ====
+# ==== ADD (global settings) ====
+IDLE_AFTER = 5   # seconds of silence until “freeze”»
+IDLE_SLEEP = 0.05  # pause interval
+# ==== ADD (utilities next to _one_tick) ====
 def _is_idle() -> bool:
     if manual_override:
         return False
-    # нет активных таймеров ходьбы/поворота
+    # no active walk timers/turning
     if any(WALK_UNTIL.get(p, 0.0) or TURN_TGT.get(p, 0.0) > 0.0 for p in robots):
         return False
-    # нет задач поз
+    # no pose tasks
     if any(ACTIVE_TASK.get(p) or TASKS.get(p) for p in robots):
         return False
-    # нет управляющих команд
+    # no control commands
     if any(np.any(cmd_vec.get(p, np.zeros(3))) for p in robots):
         return False
     return True
 
 def _maybe_freeze() -> bool:
-    """Возвращает True, если заморозили кадр и шагать физикой не надо."""
+    """Returns True, if the frame is frozen and there is no need to use physics."""
     global last_activity_time
     if not _is_idle():
         last_activity_time = time.time()
@@ -1423,14 +1419,14 @@ def _maybe_freeze() -> bool:
     if time.time() - last_activity_time < IDLE_AFTER:
         return False
 
-    # стоп торки и скорости — «застывшее» состояние
+    # stop torque and speed - “frozen” state
     d.ctrl[:] = 0
     d.qvel[:] = 0
     d.qacc[:] = 0
     d.qfrc_applied[:] = 0
     d.xfrc_applied[:] = 0
 
-    # только перерисовка + ждём события, физику не шагаем
+    # redraw only + We are waiting for events, we are not following physics
     width, height = glfw.get_framebuffer_size(window)
     viewport = mj.MjrRect(0, 0, width, height)
     mj.mjv_updateScene(m, d, opt, None, cam, mj.mjtCatBit.mjCAT_ALL, scene)
@@ -1488,7 +1484,7 @@ def ensure_initialized():
     def _aid(name: str) -> int:
         return mj.mj_name2id(m, mj.mjtObj.mjOBJ_ACTUATOR, name)
 
-    # FIX: 12 DOF ног с коленями и правильным порядком
+    # FIX: 12 DOF legs with knees and correct order
     JOINTS = [
         "left_hip_yaw_joint", "left_hip_pitch_joint", "left_hip_roll_joint",
         "left_knee_joint", "left_ankle_pitch_joint", "left_ankle_roll_joint",
@@ -1560,7 +1556,7 @@ def ensure_initialized():
        
     POLICY_PATHS = {
         "r1_": "unitree_rl_gym/deploy/pre_train/h1_2/motion.pt",
-        "r2_": "unitree_rl_gym/deploy/pre_train/h1_2/motion.pt",  # или свой .pt
+        "r2_": "unitree_rl_gym/deploy/pre_train/h1_2/motion.pt",  # or yours .pt
     }
     POL = {p: PolicyWrapper(POLICY_PATHS[p]) for p in ("r1_","r2_") if p in R}
 
@@ -1790,7 +1786,7 @@ def _extract_first_json(s: str) -> str:
 
     raise ValueError(f"Could not extract JSON from: {s}")
 
-# ===== Upper-body zero-hold (для обоих роботов) =====
+# ===== Upper-body zero-hold (for both robots) =====
 HOLD_UPPER_ZERO = True
 UPPER_BASENAMES = [
     # ===== LEFT ARM =====
@@ -1816,11 +1812,11 @@ UPPER_BASENAMES = [
     "R_pinky_proximal","R_pinky_intermediate",
 ]
 
-HOLD_UPPER_QPOS: dict[str, np.ndarray] = {}   # по роботу -> индексы qpos
-HOLD_UPPER_DOF:  dict[str, np.ndarray] = {}   # по роботу -> индексы dof (для qvel=0)
+HOLD_UPPER_QPOS: dict[str, np.ndarray] = {}   # by work -> indices qpos
+HOLD_UPPER_DOF:  dict[str, np.ndarray] = {}   # by work -> indices dof (For qvel=0)
 
 def _build_upper_hold_maps():
-    """Собираем индексы верхних суставов (qpos и dof) по каждому роботу r1_/r2_."""
+    """Collecting indices of the upper joints (qpos And dof) for each robot r1_/r2_."""
     global HOLD_UPPER_QPOS, HOLD_UPPER_DOF
     HOLD_UPPER_QPOS = {}
     HOLD_UPPER_DOF  = {}
@@ -1839,7 +1835,7 @@ def _build_upper_hold_maps():
         qpos_idx = []
         dof_idx  = []
         for base in UPPER_BASENAMES:
-            # пробуем оба варианта имён: с "_joint" и без, с нужным префиксом
+            # we try both variants of names: with "_joint" and without, with the required prefix
             cands = [f"{p}{base}_joint", f"{p}{base}"]
             j = _jid_by_candidates(cands)
             if j is None:
@@ -2006,8 +2002,8 @@ def parse_command(command: str, rag_k: int = 5, rag_csv: str = "1000.csv", rag_j
     # ---------- build messages for the LLM ----------
   
     base_prompt = _read_prompt_safe()
-    base_prompt = _append_current_pose_tables_to_prompt(base_prompt)  # уже было
-    base_prompt = _append_minimap_to_prompt(base_prompt, user_cmd=command)  # <<< ДОБАВИТЬ
+    base_prompt = _append_current_pose_tables_to_prompt(base_prompt)  # already happened
+    base_prompt = _append_minimap_to_prompt(base_prompt, user_cmd=command)  # <<< ADD
     messages = [{"role": "system", "content": base_prompt}]
     few_shots = _few_shots(command, k=rag_k, csv_path=rag_csv, json_dir=rag_json)
     show_examples = True
@@ -2090,7 +2086,7 @@ Below are guidelines: pairs of “command example → target JSON”. Strictly f
     command_cache[command] = normalized
     return normalized
 
-# --- Policy wrapper: статeless/состояние + мягкий reset ---
+# --- Policy wrapper: stateless/state + soft reset ---
 class PolicyWrapper:
     def __init__(self, model_or_path: str | torch.jit.ScriptModule):
         if isinstance(model_or_path, str):
@@ -2099,12 +2095,12 @@ class PolicyWrapper:
         else:
             self.path = None
             self.model = model_or_path
-        self.state = None  # на случай, если модель возвращает (act, new_state)
+        self.state = None  # in case the model returns (act, new_state)
 
     def reset(self, hard: bool = False):
-        """Сброс внутреннего состояния контроллера. При hard=True — перезагрузка .pt."""
+        """Resetting the internal state of the controller. At hard=True — reboot .pt."""
         self.state = None
-        # если у модели есть .reset() — попробуем вызвать
+        # if the model has .reset() — let's try to call
         if hasattr(self.model, "reset") and callable(getattr(self.model, "reset")):
             try:
                 self.model.reset()
@@ -2117,12 +2113,12 @@ class PolicyWrapper:
                 pass
 
     def act(self, obs_np: np.ndarray) -> np.ndarray:
-        """Вызов политики. Поддержка выходов вида act ИЛИ (act, new_state)."""
+        """The challenge of politics. View output support act OR (act, new_state)."""
         x = torch.from_numpy(obs_np).unsqueeze(0)  # (1, num_obs)
         out = self.model(x)
         if isinstance(out, (tuple, list)) and len(out) >= 2:
             act_t, new_state = out[0], out[1]
-            # держим state, если вдруг модель рекуррентная
+            # keep state, if suddenly the model is recurrent
             try:
                 self.state = new_state
             except Exception:
@@ -2477,7 +2473,7 @@ def _build_prompt_with_extra(user_extra: str,
         print(f"[WARN] prompt.txt not found: {e}")
 
     base_prompt = _append_current_pose_tables_to_prompt(base_prompt)
-    base_prompt = _append_minimap_to_prompt(base_prompt, user_cmd=user_extra)  # <<< ДОБАВИТЬ
+    base_prompt = _append_minimap_to_prompt(base_prompt, user_cmd=user_extra)  # <<< ADD
 
     # RAG few-shots
     fewshot_txt = _fewshot_block_text(
@@ -2602,15 +2598,15 @@ def pd_control(target_q, q, kp, target_dq, dq, kd):
     return (target_q - q) * kp + (target_dq - dq) * kd
 
 def do_reset():
-    """Hard reset = как при старте программы: точное восстановление spawn-состояния."""
+    """Hard reset = as when starting the program: exact restoration spawn-state."""
     global steps_needed, steps_done, counter, old_sin_phase, short_extra_done, last_activity_time
     global cmd, cmd_vec, action, target, robots
     global WALK_UNTIL, TURN_UNTIL, TURN_ACC, TURN_LAST, TURN_TGT
     global ACTIVE_TASK, TASKS
 
-    # 1) Полный сброс физики и возврат ровно к INIT_QPOS (из XML)
+    # 1) Complete reset of physics and return exactly to INIT_QPOS (from XML)
     mj.mj_resetData(m, d)
-    d.qpos[:] = INIT_QPOS        # <<< ключевое — НИЧЕГО не перетирать после этого
+    d.qpos[:] = INIT_QPOS        # <<< the key thing is not to grind ANYTHING after this
     d.qvel[:] = 0
     d.qacc[:] = 0
     d.qfrc_applied[:] = 0
@@ -2618,7 +2614,7 @@ def do_reset():
     d.ctrl[:] = 0
     mj.mj_forward(m, d)
 
-    # 2) Служебные счётчики/фазы
+    # 2) Service counters/phases
     steps_needed = 0
     steps_done = 0
     counter = 0
@@ -2626,7 +2622,7 @@ def do_reset():
     short_extra_done = False
     last_activity_time = time.time()
 
-    # 3) Команды/политики на ноль, цели как на старте (== текущим суставам)
+    # 3) Teams/policies to zero, goals as at the start (== current joints)
     try:
         cmd[:] = 0.0
     except Exception:
@@ -2637,10 +2633,10 @@ def do_reset():
         WALK_COUNT[p] = 0
         cmd_vec[p][:] = 0.0
         action[p][:] = 0.0
-        # как в __main__: цель = текущему положению суставов (без рывка на default_angles)
+        # as in __main__: target = current position of the joints (without jerking default_angles)
         target[p] = d.qpos[R[p]["qpos_adrs"]].copy()
 
-    # 4) Сброс таймеров ходьбы/поворота
+    # 4) Resetting Walk Timers/turning
     if 'WALK_UNTIL' in globals():
         for p in robots: WALK_UNTIL[p] = 0.0
     if 'TURN_UNTIL' in globals():
@@ -2650,21 +2646,21 @@ def do_reset():
     if 'TURN_ACC' in globals():
         for p in robots: TURN_ACC[p] = 0.0
     if 'TURN_LAST' in globals():
-        # пересчитать yaw в текущем (spawn) состоянии
+        # recalculate yaw in the current (spawn) condition
         for p in robots:
             mp = R[p]
             qw, qx, qy, qz = d.qpos[mp["base_qpos_adr"]+3 : mp["base_qpos_adr"]+7]
             TURN_LAST[p] = math.atan2(2*(qw*qz + qx*qy), 1 - 2*(qy*qy + qz*qz))
 
-    # 5) Очистить очереди поз
+    # 5) Clear pose queues
     if 'TASKS' in globals() and 'ACTIVE_TASK' in globals():
         for p in robots:
             TASKS[p].clear()
             ACTIVE_TASK[p] = None
 
-            # --- ВАЖНО: сброс контроллера и входов политики ---
+            # --- IMPORTANT: Resetting the controller and policy inputs ---
     for p in robots:
-        # полностью «чистые» входы в политику
+        # completely “clean” entrances into politics
         try:
             obs[p][:] = 0.0
             action[p][:] = 0.0
@@ -2672,11 +2668,11 @@ def do_reset():
             target[p] = d.qpos[R[p]["qpos_adrs"]].copy()
         except Exception:
             pass
-        # мягкий сброс политики (без перезагрузки файла)
+        # soft reset policy (without reloading the file)
         if p in POL and hasattr(POL[p], "reset"):
             POL[p].reset(hard=True)
 
-    # (по желанию) выровнять фазы подсчёта шагов/поворота
+    # (optional) align step counting phases/turning
     for p in robots:
         if 'TURN_ACC' in globals(): TURN_ACC[p] = 0.0
         if 'TURN_TGT' in globals(): TURN_TGT[p] = 0.0
@@ -2963,7 +2959,7 @@ def _one_tick(render=True):
             d.xfrc_applied[:] = 0.0
             if now >= t1:
                 ACTIVE_TASK[p] = None
-        # --- ДЕРЖИМ ВЕРХ В НУЛЕ, ЕСЛИ НЕТ АКТИВНОЙ ПОЗЫ У РОБОТА ---
+        # --- KEEP THE TOP AT ZERO IF THE ROBOT HAS NO ACTIVE POSE ---
     if HOLD_UPPER_ZERO:
         for p in robots:
             if ACTIVE_TASK[p] is not None:
@@ -2978,10 +2974,10 @@ def _one_tick(render=True):
     for p in robots:
         mp = R[p]
 
-        # Глушим PD/политику, если ручной режим или сейчас идёт pose-таска
+        # Jamming PD/policy if manual mode or currently in progress pose-task
         if manual_override or (ACTIVE_TASK[p] and ACTIVE_TASK[p]['type'] == 'pose'):
             d.ctrl[mp["act_ids"]] = 0.0
-            # target выравниваем по текущей позе, чтобы не было рывка после выхода
+            # target align with the current pose so that there is no jerk after exiting
             target[p] = d.qpos[mp["qpos_adrs"]].copy()
             continue
 
@@ -3034,15 +3030,15 @@ def _one_tick(render=True):
             time_in_sim = counter * simulation_dt
             phase = (time_in_sim % period) / period
             sin_phase = math.sin(2*math.pi*phase); cos_phase = math.cos(2*math.pi*phase)
-            # Завершение строго по числу шагов (нолепереход sin: - → +)
+            # Completion strictly according to the number of steps (zero transition sin: - → +)
             if WALK_GOAL[p] > 0 and (sin_phase >= 0.0 and old_sin[p] < 0.0):
                 WALK_COUNT[p] += 1
                 if WALK_COUNT[p] >= WALK_GOAL[p]:
-                    cmd_vec[p][:] = 0.0          # стоп команда ходьбы
+                    cmd_vec[p][:] = 0.0          # stop walking command
                     WALK_GOAL[p]  = 0
                     WALK_COUNT[p] = 0
-                    WALK_UNTIL[p] = 0.0          # на всякий случай
-            # обновляем следящий синус
+                    WALK_UNTIL[p] = 0.0          # just in case
+            # update the tracking sine
             old_sin[p] = sin_phase
             o = obs[p]
             o[:3] = omega_scaled
@@ -3121,7 +3117,7 @@ def open_joint_slider_window():
         idx = joint_map.get(name)
         return 0.0 if idx is None else float(np.degrees(d.qpos[idx]))
 
-    # --- окно ---
+    # --- window ---
     win = tk.Toplevel()
     win.title("H1 — sliders (Live)")
     win.geometry("640x560")
@@ -3188,7 +3184,7 @@ def open_joint_slider_window():
         except Exception as e:
             print(f"[GUI] live apply error: {e}")
         finally:
-            win.after(30, tick_apply)  # ~33 Гц
+            win.after(30, tick_apply)  # ~33 Hz
 
     win.after(30, tick_apply)
 
@@ -3232,7 +3228,7 @@ def start_walk_for(p: str, num: int, dir_deg: float, spd: float):
 
     WALK_GOAL[p]  = max(1, int(num))
     WALK_COUNT[p] = 0
-    WALK_UNTIL[p] = 0.0  # таймер больше не нужен; можно оставить как fail-safe, напр. *2*GAIT_PERIOD
+    WALK_UNTIL[p] = 0.0  # the timer is no longer needed; you can leave it as fail-safe, for example. *2*GAIT_PERIOD
 
 
 
@@ -3310,7 +3306,7 @@ def key_callback(window_, key, scancode, action, mods):
         movement["rise"] = pressed
     elif key == glfw.KEY_DOWN:
         movement["fall"] = pressed
-        # ПРОБЕЛ — push-to-talk: PRESS -> start, RELEASE -> stop+submit
+        # SPACE — push-to-talk: PRESS -> start, RELEASE -> stop+submit
     if key == glfw.KEY_SPACE:
         if action == glfw.PRESS:
             try:
@@ -3330,7 +3326,7 @@ def key_callback(window_, key, scancode, action, mods):
 
 
 
-    # в key_callback(...)
+    # V key_callback(...)
     if key == glfw.KEY_V and action == glfw.PRESS:
         start_llm_dialog_thread()
         return
@@ -3678,7 +3674,7 @@ if __name__ == "__main__":
     def _aid(name: str) -> int:
         return mj.mj_name2id(m, mj.mjtObj.mjOBJ_ACTUATOR, name)
 
-    # FIX: 12 DOF ног с коленями и правильным порядком
+    # FIX: 12 DOF legs with knees and correct order
     JOINTS = [
         "left_hip_yaw_joint", "left_hip_pitch_joint", "left_hip_roll_joint",
         "left_knee_joint", "left_ankle_pitch_joint", "left_ankle_roll_joint",
@@ -3722,7 +3718,7 @@ if __name__ == "__main__":
     
     POLICY_PATHS = {
         "r1_": "unitree_rl_gym/deploy/pre_train/h1_2/motion.pt",
-        "r2_": "unitree_rl_gym/deploy/pre_train/h1_2/motion.pt",  # или свой .pt
+        "r2_": "unitree_rl_gym/deploy/pre_train/h1_2/motion.pt",  # or yours .pt
     }
     POL = {p: PolicyWrapper(POLICY_PATHS[p]) for p in ("r1_","r2_") if p in R}
 
@@ -3754,8 +3750,8 @@ if __name__ == "__main__":
     TURN_LAST  = {p: 0.0 for p in robots} 
     TURN_TGT   = {p: 0.0 for p in robots}   
 
-    WALK_GOAL  = {p: 0 for p in robots}   # сколько шагов осталось
-    WALK_COUNT = {p: 0 for p in robots}   # сколько сделано
+    WALK_GOAL  = {p: 0 for p in robots}   # how many steps are left
+    WALK_COUNT = {p: 0 for p in robots}   # how much has been done
     TASKS       = {p: [] for p in robots}  
     ACTIVE_TASK = {p: None for p in robots} 
 
@@ -3844,7 +3840,7 @@ if __name__ == "__main__":
             
                 if now >= t1:
                     ACTIVE_TASK[p] = None
-        # --- ДЕРЖИМ ВЕРХ В НУЛЕ, ЕСЛИ НЕТ АКТИВНОЙ ПОЗЫ У РОБОТА ---
+        # --- KEEP THE TOP AT ZERO IF THE ROBOT HAS NO ACTIVE POSE ---
         if HOLD_UPPER_ZERO:
             for p in robots:
                 if ACTIVE_TASK[p] is not None:
@@ -3896,15 +3892,15 @@ if __name__ == "__main__":
                 time_in_sim = counter * simulation_dt
                 phase = (time_in_sim % period) / period
                 sin_phase = math.sin(2*math.pi*phase); cos_phase = math.cos(2*math.pi*phase)
-                                # Завершение строго по числу шагов (нолепереход sin: - → +)
+                                # Completion strictly according to the number of steps (zero transition sin: - → +)
                 if WALK_GOAL[p] > 0 and (sin_phase >= 0.0 and old_sin[p] < 0.0):
                     WALK_COUNT[p] += 1
                     if WALK_COUNT[p] >= WALK_GOAL[p]:
-                        cmd_vec[p][:] = 0.0          # стоп команда ходьбы
+                        cmd_vec[p][:] = 0.0          # stop walking command
                         WALK_GOAL[p]  = 0
                         WALK_COUNT[p] = 0
-                        WALK_UNTIL[p] = 0.0          # на всякий случай
-                # обновляем следящий синус
+                        WALK_UNTIL[p] = 0.0          # just in case
+                # update the tracking sine
                 old_sin[p] = sin_phase
 
                 o = obs[p]

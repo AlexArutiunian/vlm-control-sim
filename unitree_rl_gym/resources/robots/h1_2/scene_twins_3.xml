@@ -23,7 +23,7 @@
 
   <asset>
     <!-- регистрируем модель робота -->
-    <model name="h1_2" file="h1_2_12dof.xml"/>
+    <model name="h1_2" file="h1_2_12dof_with_sites.xml"/>
 
     <!-- небо + материал пола -->
     <texture type="skybox" builtin="flat" rgb1="0 0 0" rgb2="0 0 0" width="512" height="3072"/>

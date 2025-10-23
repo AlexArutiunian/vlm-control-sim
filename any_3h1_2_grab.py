@@ -12,7 +12,7 @@ import numpy as np
 import yaml
 import torch
 import tkinter as tk
-
+import sys
 import mujoco as mj
 from mujoco.glfw import glfw
 
@@ -1195,6 +1195,595 @@ def _one_tick(render=True):
         glfw.swap_buffers(window)
         glfw.poll_events()
 
+# =========================
+# Navigation (minimap + A* + snap-to-free)
+# =========================
+# Параметры миникарты (локальная карта вокруг активного робота)
+MAP_CELL_M    = 0.05         # 5 см на клетку
+MAP_RADIUS_M  = 3.0          # радиус окна карты, м
+MAP_SIZE_M    = MAP_RADIUS_M * 2.0
+MAP_FOLLOW_YAW = True        # карта повернута по курсу робота
+MAP_EXCLUDE_SUBSTR = ("floor", "ground")
+
+_NEIGH8 = [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)]
+
+def _robot_xy_yaw(p: str) -> tuple[float,float,float]:
+    """Поза выбранного робота (м, рад)."""
+    adr = R[p]["base_qpos_adr"]
+    rx, ry = float(d.qpos[adr]), float(d.qpos[adr+1])
+    qw, qx, qy, qz = d.qpos[adr+3:adr+7]
+    yaw = _quat_yaw(qw, qx, qy, qz)
+    return rx, ry, yaw
+
+def _world_to_mat_idx(x: float, y: float, n: int, p: str) -> tuple[int, int]:
+    """Мир -> индексы матрицы (центр — робот p, учёт поворота и flip у матрицы)."""
+    half = MAP_SIZE_M * 0.5
+    rx, ry, yaw = _robot_xy_yaw(p)
+    if not MAP_FOLLOW_YAW:
+        yaw = 0.0
+    # в СК робота
+    dx, dy = x - rx, y - ry
+    ca, sa = math.cos(-yaw), math.sin(-yaw)
+    xr = ca*dx - sa*dy   # вперёд робота
+    yr = sa*dx + ca*dy   # влево робота
+    cell = MAP_SIZE_M / float(n)
+    gx = int((yr + half) / cell)
+    gy = int((xr + half) / cell)
+    mx = int(np.clip(gx,        0, n-1))
+    my = int(np.clip((n-1) - gy, 0, n-1))
+    return mx, my
+
+def _mat_idx_to_world(mx: int, my: int, n: int, p: str) -> tuple[float, float]:
+    """Индексы клетки -> мир, центр клетки."""
+    half = MAP_SIZE_M * 0.5
+    cell = MAP_SIZE_M / float(n)
+    # учесть внутренний flip по Y
+    gx, gy = mx, (n-1) - my
+    xr = (gy + 0.5) * cell - half
+    yr = (gx + 0.5) * cell - half
+    rx, ry, yaw = _robot_xy_yaw(p)
+    if not MAP_FOLLOW_YAW:
+        yaw = 0.0
+    ca, sa = math.cos(yaw), math.sin(yaw)
+    dx = ca*xr - sa*yr
+    dy = sa*xr + ca*yr
+    return rx + dx, ry + dy
+
+def _inflate_occupancy(mat: np.ndarray, r: int) -> np.ndarray:
+    """Раздувание препятствий на r клеток (манхэттен-круг). 1 — стена, 0/2 — свободно."""
+    if r <= 0:
+        out = (mat == 1).astype(np.uint8)
+        out[(mat == 2)] = 0
+        return out
+    n = mat.shape[0]
+    obs = (mat == 1)
+    out = np.zeros_like(mat, dtype=np.uint8)
+    yy, xx = np.where(obs)
+    for y, x in zip(yy, xx):
+        y0, y1 = max(0, y-r), min(n-1, y+r)
+        x0, x1 = max(0, x-r), min(n-1, x+r)
+        out[y0:y1+1, x0:x1+1] = 1
+    out[(mat == 2)] = 0
+    return out
+
+def _a_star(start: tuple[int,int], goal: tuple[int,int], occ: np.ndarray,
+            avoid_corner_cut: bool = True) -> list[tuple[int,int]] | None:
+    """A* по сетке occ (1 — препятствие), 8-соседей, без «срезания углов»."""
+    n = occ.shape[0]
+    sx, sy = start; gx, gy = goal
+    if not (0 <= sx < n <= 4096 and 0 <= sy < n and 0 <= gx < n and 0 <= gy < n):
+        return None
+    if int(occ[sy, sx]) == 1 or int(occ[gy, gx]) == 1:
+        return None
+    import heapq
+    h = lambda x, y: math.hypot(x - gx, y - gy)
+    openq = []; heapq.heappush(openq, (h(sx, sy), 0.0, (sx, sy)))
+    came = {(sx, sy): None}; gsc = {(sx, sy): 0.0}
+    while openq:
+        _, gc, (x, y) = heapq.heappop(openq)
+        if (x, y) == (gx, gy):
+            path = [(x, y)]
+            while came[(x, y)] is not None:
+                x, y = came[(x, y)]; path.append((x, y))
+            path.reverse(); return path
+        for dx, dy in _NEIGH8:
+            nx, ny = x+dx, y+dy
+            if not (0 <= nx < n and 0 <= ny < n):      continue
+            if int(occ[ny, nx]) == 1:                  continue
+            if avoid_corner_cut and dx != 0 and dy != 0:
+                if int(occ[y, nx]) == 1 or int(occ[ny, x]) == 1:
+                    continue
+            step = math.hypot(dx, dy)
+            ng = gc + step
+            if ng + 1e-9 < gsc.get((nx, ny), 1e18):
+                gsc[(nx, ny)] = ng
+                came[(nx, ny)] = (x, y)
+                heapq.heappush(openq, (ng + h(nx, ny), ng, (nx, ny)))
+    return None
+
+# --- упрощённая отрисовка препятствий на карту: окружности по максимальному полуразмеру
+def _minimap_collect_geom_ids() -> list[int]:
+    """Собираем id тех geoms, которые считаем препятствиями (без полов, без тел роботов)."""
+    # построим множество bodyid всех роботов
+    parent = np.array(m.body_parentid, dtype=int)
+    nbody = int(m.nbody)
+    children = [[] for _ in range(nbody)]
+    for b in range(1, nbody):
+        p = parent[b]
+        if p >= 0: children[p].append(b)
+
+    def body_tree_from_free(prefix: str) -> set[int]:
+        base_jid = -1
+        for j in range(m.njnt):
+            if m.jnt_type[j] == mj.mjtJoint.mjJNT_FREE:
+                nm = mj.mj_id2name(m, mj.mjtObj.mjOBJ_JOINT, j) or ""
+                if nm.startswith(prefix):
+                    base_jid = j; break
+        if base_jid < 0: return set()
+        root = int(m.jnt_bodyid[base_jid])
+        st, seen = [root], {root}
+        while st:
+            b = st.pop()
+            for c in children[b]:
+                if c not in seen:
+                    seen.add(c); st.append(c)
+        return seen
+
+    robot_bodies = set()
+    for pref in R.keys():
+        robot_bodies |= body_tree_from_free(pref)
+
+    gids = []
+    for gid in range(m.ngeom):
+        nm = mj.mj_id2name(m, mj.mjtObj.mjOBJ_GEOM, gid) or ""
+        if any(sub in nm.lower() for sub in MAP_EXCLUDE_SUBSTR):
+            continue
+        if int(m.geom_bodyid[gid]) in robot_bodies:
+            continue
+        # плоскости бесконечные не рисуем
+        if m.geom_type[gid] == mj.mjtGeom.mjGEOM_PLANE:
+            continue
+        gids.append(gid)
+    return gids
+
+def _minimap_matrix(n: int, p: str) -> np.ndarray:
+    """0 — свободно, 1 — препятствие, 2 — клетка робота (центр карты)."""
+    mat = np.zeros((n, n), np.uint8)
+    cell = MAP_SIZE_M / float(n)
+    # препятствия: берём окружность радиуса max(sz[:2])
+    for gid in _minimap_collect_geom_ids():
+        x, y = float(d.geom_xpos[gid][0]), float(d.geom_xpos[gid][1])
+        mx, my = _world_to_mat_idx(x, y, n, p)
+        r_m = float(np.max(np.array(m.geom_size[gid])[:2])) if m.geom_size[gid].size else 0.05
+        r_px = max(1, int(r_m / cell))
+        # закрасим кружок r_px
+        r2 = r_px * r_px
+        y0, y1 = max(0, my - r_px), min(n - 1, my + r_px)
+        x0, x1 = max(0, mx - r_px), min(n - 1, mx + r_px)
+        for yy in range(y0, y1 + 1):
+            dy = yy - my
+            dxmax = int((r2 - dy*dy) ** 0.5) if r2 - dy*dy >= 0 else 0
+            lx = max(x0, mx - dxmax); rx = min(x1, mx + dxmax)
+            if lx <= rx: mat[yy, lx:rx+1] = 1
+    # отметим центр (робота)
+    cx, cy = n // 2, n // 2
+    mat[cy, cx] = 2
+    return mat
+
+def snap_goal_to_free(tx: float, ty: float, p: str, n: int = 64, inflate: int = 1) -> tuple[float, float]:
+    """Если цель попала в занятое — сдвигаем её к ближайшей свободной клетке (учитывая inflate)."""
+    base_n = max(32, min(1024, int(MAP_SIZE_M / MAP_CELL_M)))
+    mat = _minimap_matrix(base_n, p)  # уже «перевёрнутая» по Y матрица
+
+    # мир -> индексы матрицы
+    mx0, my0 = _world_to_mat_idx(tx, ty, base_n, p)
+
+    def _is_free(mx: int, my: int) -> bool:
+        nloc = mat.shape[0]
+        for yy in range(max(0, my - inflate), min(nloc - 1, my + inflate) + 1):
+            for xx in range(max(0, mx - inflate), min(nloc - 1, mx + inflate) + 1):
+                v = int(mat[yy, xx])
+                if v == 1:
+                    return False
+        return True  # 0 или 2 — ок
+
+    if _is_free(mx0, my0):
+        return tx, ty
+
+    # BFS по матрице, ищем ближайшую свободную клетку
+    from collections import deque
+    seen = np.zeros_like(mat, bool)
+    q = deque([(mx0, my0)])
+    while q:
+        mx, my = q.popleft()
+        if not (0 <= mx < base_n and 0 <= my < base_n) or seen[my, mx]:
+            continue
+        seen[my, mx] = True
+        if _is_free(mx, my):
+            return _mat_idx_to_world(mx, my, base_n, p)
+        for dx, dy in _NEIGH8:
+            q.append((mx + dx, my + dy))
+    # не нашли — оставим исходную цель
+    return tx, ty
+
+def _segment_is_clear(x0: float, y0: float, x1: float, y1: float,
+                      n: int, occ: np.ndarray, p: str,
+                      inflate_cells: int = 1, skip_first_m: float = 0.02) -> bool:
+    """Проверка видимости отрезка по сетке (с локальным раздувом)."""
+    cell = MAP_SIZE_M / float(n)
+    step = max(cell * 0.5, 0.02)
+    dist = math.hypot(x1 - x0, y1 - y0)
+    if dist < 1e-6: return True
+    t = max(skip_first_m, step)
+    while t <= dist:
+        x = x0 + (x1 - x0) * (t / dist)
+        y = y0 + (y1 - y0) * (t / dist)
+        mx, my = _world_to_mat_idx(x, y, n, p)
+        if 0 <= mx < n and 0 <= my < n:
+            for dy in range(-inflate_cells, inflate_cells + 1):
+                for dx in range(-inflate_cells, inflate_cells + 1):
+                    xx, yy = mx + dx, my + dy
+                    if 0 <= xx < n and 0 <= yy < n and int(occ[yy, xx]) == 1:
+                        return False
+        t += step
+    return True
+
+def _simplify_world_path(points_world: list[tuple[float,float]],
+                         n: int, occ: np.ndarray, p: str,
+                         inflate_on_los: int = 1) -> list[tuple[float,float]]:
+    """Исключаем лишние точки, оставляя максимально дальние «видимые» сегменты."""
+    if len(points_world) <= 2:
+        return points_world[:]
+    out = [points_world[0]]
+    i = 0
+    while i < len(points_world) - 1:
+        j = len(points_world) - 1
+        while j > i + 1:
+            if _segment_is_clear(points_world[i][0], points_world[i][1],
+                                 points_world[j][0], points_world[j][1],
+                                 n, occ, p, inflate_cells=inflate_on_los):
+                break
+            j -= 1
+        out.append(points_world[j])
+        i = j
+    return out
+
+def _carve_free_disk(occ: np.ndarray, mx: int, my: int, r: int):
+    """Обнулить оккупацию в круге радиуса r (клетки) вокруг (mx,my)."""
+    if r <= 0: 
+        return
+    n = occ.shape[0]
+    r2 = r * r
+    y0, y1 = max(0, my - r), min(n - 1, my + r)
+    x0, x1 = max(0, mx - r), min(n - 1, mx + r)
+    for yy in range(y0, y1 + 1):
+        dy = yy - my
+        dxmax = int((r2 - dy*dy)**0.5) if r2 - dy*dy >= 0 else 0
+        lx = max(x0, mx - dxmax); rx = min(x1, mx + dxmax)
+        if lx <= rx:
+            occ[yy, lx:rx+1] = 0
+
+
+def _minimap_dbg_ascii(p: str, n: int = 64, inflate_cells: int = 2):
+    """Печать карты в ASCII: '.' свободно, '#' препятствие, 'R' центр робота."""
+    mat_raw = _minimap_matrix(n, p)
+    occ = _inflate_occupancy(mat_raw, inflate_cells)
+    rows = []
+    for y in range(n):
+        line = []
+        for x in range(n):
+            if mat_raw[y, x] == 2:
+                line.append('R')
+            elif occ[y, x] == 1:
+                line.append('#')
+            else:
+                line.append('.')
+        rows.append("".join(line))
+    print("\n".join(rows))
+
+def _astar_probe(tx: float, ty: float, p: str, n_map: int = 64, inflate_cells: int = 2):
+    mat_raw = _minimap_matrix(n_map, p)
+    occ = _inflate_occupancy(mat_raw, inflate_cells)
+    sx = sy = n_map // 2  # центр
+    gx, gy = _world_to_mat_idx(tx, ty, n_map, p)
+    _carve_free_disk(occ, sx, sy, r=2)
+    _carve_free_disk(occ, gx, gy, r=1)
+    print(f"[probe] start=({sx},{sy}) val={int(occ[sy, sx])}  goal=({gx},{gy}) val={int(occ[gy, gx])}")
+    path = _a_star((sx, sy), (gx, gy), occ)
+    print(f"[probe] path_len={len(path) if path else 0}")
+    return path
+
+# =========================
+# Sites & Box alignment (pose from sites, pick face, target XY/yaw)
+# =========================
+def _mat9_to_yaw(xmat9) -> float:
+    """Yaw вокруг +Z из 3x3 матрицы (row-major, MuJoCo)."""
+    R00 = float(xmat9[0]); R10 = float(xmat9[3])  # [1,0] индекс = 3
+    return math.atan2(R10, R00)
+
+def _site_pose_yaw(name: str):
+    sid = mj.mj_name2id(m, mj.mjtObj.mjOBJ_SITE, name)
+    if sid < 0:
+        raise ValueError(f"site '{name}' not found")
+    pos = d.site_xpos[sid].copy()
+    yaw = _mat9_to_yaw(d.site_xmat[sid])
+    body_id = int(m.site_bodyid[sid])
+    return pos, yaw, body_id, sid
+
+def _find_box_geom_on_body(body_id: int):
+    """Вернём самый крупный BOX-geom на теле (центр, yaw, half-sizes)."""
+    best = None; best_vol = -1.0
+    for gid in range(m.ngeom):
+        if int(m.geom_bodyid[gid]) != body_id: 
+            continue
+        if m.geom_type[gid] != mj.mjtGeom.mjGEOM_BOX:
+            continue
+        sz = np.array(m.geom_size[gid], dtype=float)  # [hx, hy, hz]
+        vol = float(sz[0]*sz[1]*sz[2])
+        if vol > best_vol:
+            best_vol = vol
+            best = {
+                "gid": gid,
+                "center": d.geom_xpos[gid].copy(),
+                "yaw": _mat9_to_yaw(d.geom_xmat[gid]),
+                "sizes": sz
+            }
+    return best
+
+def _face_normal_from_yaw(yaw_box: float, face: str) -> tuple[float,float]:
+    """Локальные оси box: +X=front, -X=back, +Y=left, -Y=right."""
+    face = (face or "left").lower()
+    if face in ("front","+x","x+"):  lx, ly =  1.0,  0.0
+    elif face in ("back","-x","x-"): lx, ly = -1.0,  0.0
+    elif face in ("left","+y","y+"): lx, ly =  0.0,  1.0
+    elif face in ("right","-y","y-"):lx, ly =  0.0, -1.0
+    else:
+        raise ValueError("face must be one of: left/right/front/back")
+    ca, sa = math.cos(yaw_box), math.sin(yaw_box)
+    nx = ca*lx - sa*ly
+    ny = sa*lx + ca*ly
+    return nx, ny
+
+def _face_center(center: np.ndarray, yaw_box: float, sizes: np.ndarray, face: str) -> tuple[float,float]:
+    """Центр соответствующей стороны коробки."""
+    hx, hy = float(sizes[0]), float(sizes[1])
+    nx, ny = _face_normal_from_yaw(yaw_box, face)
+    # отступ от центра к грани по нужной полуоси
+    offset = hx if face.lower() in ("front","+x","x-","x+") else hy
+    return center[0] + nx*offset, center[1] + ny*offset
+
+def approach_site_face(site_name: str, face: str = "left", stand_off: float = 0.35,
+                       along: float = 0.0, robot: str | None = None,
+                       speed: float = 0.25, stop: float = 0.20,
+                       side_align: str = "left_to_face", turn_speed_deg_s: float = 120.0):
+    """
+    Подвод корпуса к выбранной стороне коробки, описанной site'ом.
+    - site_name: site на том же body, где лежит BOX-geom (центр/ориентация берем с geома)
+    - face: 'left'|'right'|'front'|'back' — какую грань выбирать
+    - stand_off: расстояние от грани до корпуса (м)
+    - along: сдвиг вдоль грани (м), чтобы встать не в центре
+    - side_align: 'left_to_face' (левая сторона робота к грани),
+                  'front_to_face' (лицом к грани)
+    """
+    p_sel = (parse_robot_input(robot) or [ACTIVE])[0]
+
+    # 1) поза site и коробки (ищем BOX-geom на body site'а)
+    spos, syaw, body_id, sid = _site_pose_yaw(site_name)
+    box = _find_box_geom_on_body(body_id)
+    if box is None:
+        # fallback: используем сам site как центр/ориентацию и предположим 0.25м полуоси
+        center = spos
+        yaw_box = syaw
+        sizes = np.array([0.25, 0.25, 0.25], float)
+        print(f"[approach] no BOX geom on body of '{site_name}', fallback sizes=0.25")
+    else:
+        center = box["center"]; yaw_box = box["yaw"]; sizes = box["sizes"]
+
+    # 2) центр нужной грани и её нормаль
+    fx, fy = _face_center(center, yaw_box, sizes, face)
+    nx, ny = _face_normal_from_yaw(yaw_box, face)
+
+    # 3) целевая точка для базы: на расстоянии stand_off «снаружи» грани
+    tx = fx + nx * stand_off
+    ty = fy + ny * stand_off
+
+    # сдвиг вдоль грани (тангенс к нормали)
+    tx += (-ny) * along
+    ty += ( nx) * along
+
+    # 4) желаемый курс корпуса у грани
+    if side_align == "left_to_face":
+        # хотим, чтобы +Y робота «смотрел» на грань → выровняем левой стороной
+        vx, vy = -nx, -ny                # направление к грани
+        yaw_target = math.atan2(vy, vx) - math.pi/2.0
+    elif side_align == "front_to_face":
+        # лицом к грани
+        vx, vy = -nx, -ny
+        yaw_target = math.atan2(vy, vx)
+    else:
+        # параллельно грани (вперёд вдоль кромки)
+        yaw_target = yaw_box + (math.pi/2.0 if face.lower() in ("left","+y","right","-y") else 0.0)
+
+    print(f"[approach] face='{face}'  target=({tx:+.3f},{ty:+.3f})  yaw_t={math.degrees(yaw_target):+.1f}°")
+
+    # 5) идём A* к точке
+    go_to_xy(tx, ty, robot=p_sel, speed=speed, stop=stop)
+
+    # 6) финальное выравнивание курса
+    _, _, yaw = _robot_xy_yaw(p_sel)
+    dpsi = _wrap_to_pi(yaw_target - yaw)
+    if abs(dpsi) > math.radians(3.0):
+        run_turn_blocking_for(p_sel, math.degrees(dpsi), spd_deg_s=turn_speed_deg_s)
+
+    # (опционально) небольшой «докат» перпендикулярно к грани, если надо прям вплотную:
+    # cmd_vec[p_sel][:] = [0.08, 0.0, 0.0]; time.sleep(0.5); cmd_vec[p_sel][:] = 0.0
+
+
+def go_to_xy(tx: float, ty: float, robot: str | None = None,
+             speed: float = 0.22, stop: float = 0.30, slow_r: float = 0.70,
+             yaw_kp: float = 2.0, yaw_max_deg: float = 120.0,
+             n_map: int = 64, inflate_cells: int = 2,
+             replan_every: int = 90, los_inflate: int = 1):
+    """
+    Планирование A* по локальной миникарте и движение к (tx,ty) с обходом препятствий.
+    Делает несколько попыток: увеличивает окно карты и/или уменьшает раздувание препятствий.
+    """
+    p_sel = (parse_robot_input(robot) or [ACTIVE])[0]
+
+    # --- набор попыток (size_m — ширина окна карты; infl — раздувание препятствий)
+    tries = [
+        (MAP_SIZE_M, inflate_cells),
+        (max(MAP_SIZE_M, 8.0), inflate_cells),
+        (max(MAP_SIZE_M, 8.0), max(1, inflate_cells - 1)),
+        (max(MAP_SIZE_M, 10.0), max(1, inflate_cells - 1)),
+    ]
+
+    # Сохраним глобальные, чтобы восстановить после попыток
+    _orig_size = MAP_SIZE_M
+    _orig_radius = MAP_RADIUS_M
+
+    best_pts_world = None
+    gxw, gyw = tx, ty  # целевые мировые (после snap-to-free уточним)
+    used_size = MAP_SIZE_M
+    used_inflate = inflate_cells
+
+    try:
+        for size_m, infl in tries:
+            # временно расширяем окно карты
+            globals()["MAP_SIZE_M"] = float(size_m)
+            globals()["MAP_RADIUS_M"] = float(size_m) * 0.5
+
+            # снимок карты, раздутая оккупация
+            mat_raw = _minimap_matrix(n_map, p_sel)
+            occ = _inflate_occupancy(mat_raw, infl)
+
+            # старт/финиш в индексах (финиш — со snap-to-free в пределах текущего окна)
+            # старт — ровно центр миникарты
+            sx = sy = n_map // 2
+
+            # цель — snap-to-free, затем в индексы
+            gxw, gyw = snap_goal_to_free(tx, ty, p_sel, n=n_map, inflate=1)
+            gx, gy = _world_to_mat_idx(gxw, gyw, n_map, p_sel)
+            # база для прогресса: начальная прямая дистанция до цели (для %)
+            rx0, ry0, _ = _robot_xy_yaw(p_sel)
+            _init_goal_dist = max(1e-6, math.hypot(gxw - rx0, gyw - ry0))
+
+            # гарантируем свободный «пятачок» у старта (и слегка у цели)
+            _carve_free_disk(occ, sx, sy, r=2)   # старт
+            _carve_free_disk(occ, gx, gy, r=1)   # цель (мягче)
+
+            path = _a_star((sx, sy), (gx, gy), occ)
+
+            # простые проверки
+            def _safe(mat, x, y):
+                return 1 if (0 <= x < mat.shape[1] and 0 <= y < mat.shape[0] and int(mat[y, x]) == 1) else 0
+
+            if _safe(occ, sx, sy):
+                print(f"[goto] start cell is blocked (infl={infl}, size={size_m}m). Trying next setup...")
+                continue
+            if _safe(occ, gx, gy):
+                print(f"[goto] goal cell is blocked even after snap-to-free (infl={infl}, size={size_m}m). Trying next setup...")
+                continue
+
+            # A*
+          #  path = _a_star((sx, sy), (gx, gy), occ)
+            if not path:
+                print(f"[goto/a*] no path (infl={infl}, size={size_m}m).")
+                continue
+
+            # индексы -> мир + упрощение
+            pts_world = [_mat_idx_to_world(x, y, n_map, p_sel) for (x, y) in path]
+            pts_world = _simplify_world_path(pts_world, n_map, occ, p_sel, inflate_on_los=los_inflate)
+            best_pts_world = pts_world
+            used_size = size_m
+            used_inflate = infl
+            print(f"[goto/a*] path ok: grid={len(path)} waypoints={len(pts_world)} (infl={infl}, size={size_m}m)")
+            break
+    finally:
+        # вернём глобалы
+        globals()["MAP_SIZE_M"] = _orig_size
+        globals()["MAP_RADIUS_M"] = _orig_radius
+
+    if not best_pts_world:
+        # финальная диагностика: покажем с текущими глобальными
+        print("[goto] FAIL: path not found after multi-try.")
+        _astar_probe(tx, ty, p_sel, n_map=n_map, inflate_cells=inflate_cells)
+        # Для удобства: можно ещё распечатать миникарту
+        # _minimap_dbg_ascii(p_sel, n=n_map, inflate_cells=inflate_cells)
+        return
+
+    # === движение по точкам
+    yaw_max = math.radians(yaw_max_deg)
+    wp_i = 0
+    last_plan_counter = counter
+    gxw, gyw = best_pts_world[-1]  # конечная точка из пути (уточнённая)
+
+    while not glfw.window_should_close(window):
+        gx, gy = best_pts_world[wp_i] if wp_i < len(best_pts_world) else (gxw, gyw)
+        rx, ry, yaw = _robot_xy_yaw(p_sel)
+        dx, dy = gx - rx, gy - ry
+        dist = math.hypot(dx, dy)
+        if dist <= stop:
+            wp_i += 1
+            if wp_i >= len(best_pts_world):
+                break
+            continue
+
+        th = math.atan2(dy, dx)
+        yaw_e = _wrap_to_pi(th - yaw)
+
+        v = speed * min(1.0, dist / max(slow_r, 1e-3))
+        v *= max(0.0, math.cos(abs(yaw_e)))  # тормоз при большом развороте
+
+        vxb = v * math.cos(yaw_e)   # вперёд в СК робота
+        vyb = v * math.sin(yaw_e)   # боковая компонента
+        yaw_rate = max(-yaw_max, min(yaw_max, yaw_kp * yaw_e))
+
+        cmd_vec[p_sel][:] = [vxb, vyb, yaw_rate]
+        _one_tick(render=True)
+        
+        # одноcтрочный прогресс
+        rem = math.hypot(gxw - rx, gyw - ry)
+        percent = 100.0 * (1.0 - min(1.0, rem / _init_goal_dist))
+        sys.stdout.write(f"\r[goto] {percent:5.1f}% | rem {rem:.2f} m | wp {wp_i+1}/{len(pts_world)} | v~{v:.2f} m/s")
+        sys.stdout.flush()
+
+
+        # периодически перепланируем (в тех же параметрах, что подобрались)
+        if (counter - last_plan_counter) >= replan_every:
+            last_plan_counter = counter
+            # временно расширим окно на ту же used_size
+            _s0, _r0 = MAP_SIZE_M, MAP_RADIUS_M
+            globals()["MAP_SIZE_M"] = float(used_size)
+            globals()["MAP_RADIUS_M"] = float(used_size) * 0.5
+            try:
+                mat_raw = _minimap_matrix(n_map, p_sel)
+                occ = _inflate_occupancy(mat_raw, used_inflate)
+                        # старт — ровно центр миникарты
+                sx = sy = n_map // 2
+
+                # цель — snap-to-free, затем в индексы
+                gxw, gyw = snap_goal_to_free(tx, ty, p_sel, n=n_map, inflate=1)
+                gx, gy = _world_to_mat_idx(gxw, gyw, n_map, p_sel)
+
+                # гарантируем свободный «пятачок» у старта (и слегка у цели)
+                _carve_free_disk(occ, sx, sy, r=2)   # старт
+                _carve_free_disk(occ, gx, gy, r=1)   # цель (мягче)
+
+                path = _a_star((sx, sy), (gx, gy), occ)
+
+                if path:
+                    best_pts_world = _simplify_world_path(
+                        [_mat_idx_to_world(x, y, n_map, p_sel) for (x, y) in path],
+                        n_map, occ, p_sel, inflate_on_los=los_inflate
+                    )
+                    wp_i = min(wp_i, len(best_pts_world)-1)
+            finally:
+                globals()["MAP_SIZE_M"] = _s0
+                globals()["MAP_RADIUS_M"] = _r0
+
+    cmd_vec[p_sel][:] = 0.0
+
 
 def _wait_turns_done(sel, timeout=None):
     t0 = time.time()
@@ -1320,11 +1909,45 @@ def key_callback(window_, key, scancode, action, mods):
         movement["rise"] = pressed
     elif key == glfw.KEY_DOWN:
         movement["fall"] = pressed
+        # 'B' — подойти к грани коробки по site
+    elif key == glfw.KEY_B and pressed:
+        try:
+            site = input("Site name (box anchor): ").strip()
+            face = (input("Face [left/right/front/back] [left]: ").strip() or "left").lower()
+            standoff_in = input("Stand-off m [0.35]: ").strip()
+            standoff = float(standoff_in) if standoff_in else 0.35
+            along_in = input("Shift along face m [0.0]: ").strip()
+            along = float(along_in) if along_in else 0.0
+            sp_in = input("Speed m/s [0.25]: ").strip()
+            sp = float(sp_in) if sp_in else 0.25
+            stop_in = input("Stop radius m [0.20]: ").strip()
+            stop_r = float(stop_in) if stop_in else 0.20
+            mode = (input("Align mode [left_to_face|front_to_face] [left_to_face]: ").strip() or "left_to_face")
+        except Exception:
+            print("Invalid input."); 
+            return
+
+        sel = ask_robots(prompt_default_active=True)
+        if len(sel) == 1:
+            globals()["ACTIVE"] = sel[0]
+        if not sel:
+            sel = [ACTIVE]
+
+        for p in sel:
+            print(f"[approach] start for {p[:-1]} site='{site}' face='{face}'")
+            approach_site_face(site, face=face, stand_off=standoff, along=along,
+                               robot=p, speed=sp, stop=stop_r, side_align=mode)
+        print("[approach] done.")
 
     # ESC
     elif key == glfw.KEY_ESCAPE and pressed:
         glfw.set_window_should_close(window_, True) 
     
+    elif key == glfw.KEY_M and pressed:
+        sel = ask_robots(prompt_default_active=True)
+        p = sel[0] if sel else ACTIVE
+        _minimap_dbg_ascii(p, n=64, inflate_cells=2)
+
 
     # 'O' — example placeholder: do nothing (empty list)
     elif key == glfw.KEY_O and pressed:
@@ -1348,6 +1971,35 @@ def key_callback(window_, key, scancode, action, mods):
         for p in sel:
             start_turn_for(p, ang, spd)
 
+        # 'G' — перейти к мировой точке (с A* и snap-to-free из go_to_xy)
+    elif key == glfw.KEY_G and pressed:
+        try:
+            raw = input("Target XY (meters), e.g. '1.2 -0.7': ").strip()
+            parts = raw.replace(",", " ").split()
+            if len(parts) < 2:
+                raise ValueError("need 2 numbers")
+            tx, ty = float(parts[0]), float(parts[1])
+
+            sp_in = input("Speed m/s [0.22]: ").strip()
+            sp = float(sp_in) if sp_in else 0.22
+
+            stop_in = input("Stop radius m [0.30]: ").strip()
+            stop_r = float(stop_in) if stop_in else 0.30
+        except Exception:
+            print("Invalid XY/speed/stop input."); 
+            return
+
+        sel = ask_robots(prompt_default_active=True)
+        if len(sel) == 1:
+            globals()["ACTIVE"] = sel[0]
+        if not sel:
+            sel = [ACTIVE]
+
+        # Запуск для выбранных роботов (последовательно)
+        for p in sel:
+            print(f"[goto] start for {p[:-1]} -> ({tx:+.2f}, {ty:+.2f})")
+            go_to_xy(tx, ty, robot=p, speed=sp, stop=stop_r)
+        print("[goto] done.")
 
 
 

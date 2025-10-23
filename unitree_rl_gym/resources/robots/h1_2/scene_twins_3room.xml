@@ -13,7 +13,7 @@
 
   <asset>
     <!-- регистрируем модель робота -->
-    <model name="h1_2" file="h1_2_12dof.xml"/>
+    <model name="h1_2" file="h1_2_12dof_with_sites.xml"/>
      <model name="table" file="table.xml"/>
      <model name="table_with_box" file="table_with_box.xml"/>
 
@@ -45,10 +45,10 @@
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
 
     <!-- два робота -->
-    <frame name="r1_root" pos="-2 0 0">
+    <frame name="r1_root" pos="-2.05 0 0">
       <attach model="h1_2" prefix="r1_"/>
     </frame>
-    <frame name="r2_root" pos="2 0 0" euler="0 0 3.14">
+    <frame name="r2_root" pos="2.05 0 0" euler="0 0 3.14">
       <attach model="h1_2" prefix="r2_"/>
     </frame>
 
