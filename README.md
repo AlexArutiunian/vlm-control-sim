@@ -10,10 +10,12 @@ Install `uv`:
 pip install uv
 ```
 
+Run commands from the repository root.
+
 ### Single robot
 
 ```bash
-uv run any_robots.py --robot h1_2
+uv run app/any_robots.py --robot h1_2
 ```
 
 Available robot options: `g1`, `h1`, `h1_2`.
@@ -23,61 +25,74 @@ Available robot options: `g1`, `h1`, `h1_2`.
 Press `V` to start the realtime LLM dialogue:
 
 ```bash
-uv run any_ag_micro.py
+uv run app/any_ag_micro.py
 ```
 
 ### Three twin robots
 
 ```bash
-uv run any_3h1_2.py
+uv run app/any_3h1_2.py
 ```
 
 ### Three-robot grasp experiment
 
 ```bash
-uv run any_3h1_2_grab.py
+uv run app/any_3h1_2_grab.py
 ```
 
 ### A* obstacle-avoidance version
 
 ```bash
-uv run any_robots_map.py
+uv run app/any_robots_map.py
 ```
 
 ## Repository layout
 
-### Main entrypoints
+```text
+.
+├── app/                 # runnable simulation code + shared Python modules
+├── experiments/         # standalone experimental scripts
+├── tools/               # one-off model/repository utilities
+├── archive/             # old scaffolding kept instead of deleting it
+├── docs/                # generated/reference documentation
+├── best/                # selected motion JSON files
+├── g1-rag/              # G1 RAG/motion assets
+├── h1_2/                # H1_2 RAG/motion assets
+├── recorded/            # GIF/video examples
+├── unitree_rl_gym/      # Unitree RL simulation resources and policies
+├── pyproject.toml
+└── uv.lock
+```
 
-- `any_robots.py` — generic single-robot launcher (`--robot g1|h1|h1_2`).
-- `any_ag_micro.py` — voice/realtime-agent scenario.
-- `any_3h1_2.py` — three-robot scenario.
-- `any_3h1_2_grab.py` — three-robot grasp experiment.
-- `any_robots_map.py` — obstacle avoidance with A*.
+### `app/`
 
-### Shared runtime modules
+Main entrypoints:
 
-- `llm_providers.py`, `openai_llm.py` — LLM provider integration.
-- `settings.py` — runtime/RAG settings.
-- `demo_player.py` — demo/action loading helpers.
-- `sim_phrases.py` — phrase similarity and few-shot helpers.
+- `app/any_robots.py` — generic single-robot launcher (`--robot g1|h1|h1_2`).
+- `app/any_ag_micro.py` — voice/realtime-agent scenario.
+- `app/any_3h1_2.py` — three-robot scenario.
+- `app/any_3h1_2_grab.py` — three-robot grasp experiment.
+- `app/any_robots_map.py` — obstacle avoidance with A*.
 
-These modules remain in the repository root because current entrypoints import them directly.
+Additional retained entrypoints:
 
-### Additional / experimental entrypoints
+- `app/any_twh1_2.py` — additional multi-robot experiment.
+- `app/wb_twins.py` — earlier twin-robot implementation retained for compatibility/history.
 
-- `any_twh1_2.py` — additional multi-robot experiment.
-- `wb_twins.py` — earlier twin-robot implementation retained for compatibility/history.
-- `experiments/` — self-contained experimental scripts that do not need to stay in the root.
-- `tools/` — one-off repository/model utilities.
-- `archive/` — obsolete scaffolding retained instead of deleting it.
-- `docs/` — generated/reference documentation.
+Shared runtime modules are kept beside the entrypoints so the current imports continue to work without refactoring:
 
-### Data and assets
+- `app/llm_providers.py`
+- `app/openai_llm.py`
+- `app/settings.py`
+- `app/demo_player.py`
+- `app/sim_phrases.py`
 
-- `best/` — selected motion JSON files.
-- `g1-rag/`, `h1_2/` — robot-specific motion/RAG assets.
-- `recorded/` — recorded GIF examples.
-- `unitree_rl_gym/` — Unitree RL simulation resources and policies.
+### Other folders
+
+- `experiments/amin_sim2.py` — standalone multi-robot simulation experiment.
+- `tools/modify.py` — XML/model modification utility.
+- `archive/main.py` — old placeholder entrypoint retained rather than deleted.
+- `docs/README.pdf` — previous generated PDF documentation.
 
 ## How it works
 
