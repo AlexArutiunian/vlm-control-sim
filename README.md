@@ -2,6 +2,14 @@
 
 Simulation playground for controlling Unitree humanoid robots with natural-language commands through VLM/LLM-generated joint actions.
 
+<p align="center">
+  <img src="media/demos/hello3x.gif" alt="Three robots waving demo">
+</p>
+
+<p align="center">
+  <img src="media/demos/g1_replace_sphere.gif" alt="G1 moving sphere demo">
+</p>
+
 ## Quick start
 
 Install `uv`:
@@ -137,10 +145,5 @@ The model returns a JSON array containing joints and target angles. For example,
 ## Examples
 
 ![h1_2 hold](media/demos/h1_2_hold_white.gif)
-![g1 replace sphere](media/demos/g1_replace_sphere.gif)
 ![h1_2 second view](media/demos/h1_2_hold_white_2nd_view.gif)
 ![red box](media/demos/red_box_wide.gif)
-
-<p align="center">
-  <img src="media/demos/hello3x.gif" alt="Three robots demo">
-</p>
