@@ -4,11 +4,32 @@ __pycache__/
 build/
 dist/
 wheels/
-*.egg-info
-
-# secret data (api keys)
-
-secrets_keys.py
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Virtual environments
-.venv
+.venv/
+venv/
+env/
+
+# Local secrets and environment
+secrets_keys.py
+.env
+.env.*
+*.pem
+*.key
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+.cache/
+tmp/
+temp/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
