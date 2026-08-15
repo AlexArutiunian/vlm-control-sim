@@ -1,7 +1,7 @@
 [project]
 name = "any-robot"
 version = "0.1.0"
-description = "Add your description here"
+description = "MuJoCo simulation playground for natural-language control of Unitree humanoid robots"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
