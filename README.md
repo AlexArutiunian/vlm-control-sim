@@ -10,7 +10,15 @@ Install `uv`:
 pip install uv
 ```
 
-Run commands from the repository root.
+Run commands from the repository root. Runtime paths such as `unitree_rl_gym/...` are resolved relative to the repository root.
+
+### Repository check
+
+Before running a simulation, verify Python syntax and required runtime assets:
+
+```bash
+bash scripts/check.sh
+```
 
 ### Single robot
 
@@ -55,6 +63,7 @@ uv run app/any_robots_map.py
 ├── media/               # demo GIFs and visual examples
 ├── experiments/         # standalone experimental scripts
 ├── tools/               # one-off model/repository utilities
+├── scripts/             # repository checks and helper scripts
 ├── archive/             # old scaffolding kept instead of deleting it
 ├── docs/                # generated/reference documentation
 ├── unitree_rl_gym/      # Unitree RL simulation resources and policies
@@ -104,6 +113,7 @@ data/
 - `media/demos/` — recorded GIF examples.
 - `experiments/amin_sim2.py` — standalone multi-robot simulation experiment.
 - `tools/modify.py` — XML/model modification utility.
+- `scripts/check.sh` — syntax and runtime-asset sanity check.
 - `archive/main.py` — old placeholder entrypoint retained rather than deleted.
 - `docs/README.pdf` — previous generated PDF documentation.
 
