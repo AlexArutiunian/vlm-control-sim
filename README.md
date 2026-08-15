@@ -51,15 +51,15 @@ uv run app/any_robots_map.py
 ```text
 .
 ├── app/                 # runnable simulation code + shared Python modules
+├── data/                # motion and RAG assets
+├── media/               # demo GIFs and visual examples
 ├── experiments/         # standalone experimental scripts
 ├── tools/               # one-off model/repository utilities
 ├── archive/             # old scaffolding kept instead of deleting it
 ├── docs/                # generated/reference documentation
-├── best/                # selected motion JSON files
-├── g1-rag/              # G1 RAG/motion assets
-├── h1_2/                # H1_2 RAG/motion assets
-├── recorded/            # GIF/video examples
 ├── unitree_rl_gym/      # Unitree RL simulation resources and policies
+├── prompt.txt           # current base prompt (kept at root for runtime compatibility)
+├── prompt_twins.txt     # twin-robot prompt (kept at root for runtime compatibility)
 ├── pyproject.toml
 └── uv.lock
 ```
@@ -87,8 +87,21 @@ Shared runtime modules are kept beside the entrypoints so the current imports co
 - `app/demo_player.py`
 - `app/sim_phrases.py`
 
+### `data/`
+
+```text
+data/
+├── motions/
+│   └── best/            # selected motion JSON files
+└── rag/
+    ├── g1/              # G1 RAG/motion assets
+    ├── h1_2/            # H1_2 RAG/motion assets
+    └── rag_best.csv
+```
+
 ### Other folders
 
+- `media/demos/` — recorded GIF examples.
 - `experiments/amin_sim2.py` — standalone multi-robot simulation experiment.
 - `tools/modify.py` — XML/model modification utility.
 - `archive/main.py` — old placeholder entrypoint retained rather than deleted.
@@ -114,11 +127,11 @@ The model returns a JSON array containing joints and target angles. For example,
 
 ## Examples
 
-![h1_2 hold](recorded/h1_2_hold_white.gif)
-![g1 replace sphere](recorded/g1_replace_sphere.gif)
-![h1_2 second view](recorded/h1_2_hold_white_2nd_view.gif)
-![red box](recorded/red_box_wide.gif)
+![h1_2 hold](media/demos/h1_2_hold_white.gif)
+![g1 replace sphere](media/demos/g1_replace_sphere.gif)
+![h1_2 second view](media/demos/h1_2_hold_white_2nd_view.gif)
+![red box](media/demos/red_box_wide.gif)
 
 <p align="center">
-  <img src="recorded/hello3x.gif" alt="Three robots demo">
+  <img src="media/demos/hello3x.gif" alt="Three robots demo">
 </p>

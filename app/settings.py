@@ -19,4 +19,9 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-5")
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "4096"))
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+
+# --- Repository resources ---
 PROMPT_PATH = os.getenv("PROMPT_PATH", str(REPO_ROOT / "prompt.txt"))
+RAG_K = int(os.getenv("RAG_K", "3"))
+RAG_CSV = os.getenv("RAG_CSV", str(REPO_ROOT / "data" / "rag" / "rag_best.csv"))
+RAG_JSON = os.getenv("RAG_JSON", str(REPO_ROOT / "data" / "motions" / "best"))
