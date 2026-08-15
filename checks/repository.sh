@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 echo "[1/4] Compile Python files"
-uv run python -m py_compile app/*.py experiments/*.py tools/*.py
+uv run python -m py_compile app/*.py legacy/*.py utilities/*.py
 
 echo "[2/4] Check repository files"
 for path in \

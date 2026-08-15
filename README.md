@@ -17,7 +17,7 @@ Run commands from the repository root. Runtime paths such as `unitree_rl_gym/...
 Before running a simulation, verify Python syntax and required runtime assets:
 
 ```bash
-bash scripts/check.sh
+bash checks/repository.sh
 ```
 
 ### Single robot
@@ -61,10 +61,9 @@ uv run app/any_robots_map.py
 ├── app/                 # runnable simulation code + shared Python modules
 ├── data/                # motion and RAG assets
 ├── media/               # demo GIFs and visual examples
-├── experiments/         # standalone experimental scripts
-├── tools/               # one-off model/repository utilities
-├── scripts/             # repository checks and helper scripts
-├── archive/             # old scaffolding kept instead of deleting it
+├── legacy/              # retained older/standalone implementations
+├── utilities/           # one-off model/repository utilities
+├── checks/              # repository sanity checks
 ├── docs/                # generated/reference documentation
 ├── unitree_rl_gym/      # Unitree RL simulation resources and policies
 ├── prompt.txt           # current base prompt (kept at root for runtime compatibility)
@@ -111,10 +110,10 @@ data/
 ### Other folders
 
 - `media/demos/` — recorded GIF examples.
-- `experiments/amin_sim2.py` — standalone multi-robot simulation experiment.
-- `tools/modify.py` — XML/model modification utility.
-- `scripts/check.sh` — syntax and runtime-asset sanity check.
-- `archive/main.py` — old placeholder entrypoint retained rather than deleted.
+- `legacy/amin_sim2.py` — retained standalone multi-robot simulation version.
+- `legacy/main.py` — old placeholder entrypoint retained rather than deleted.
+- `utilities/modify.py` — XML/model modification utility.
+- `checks/repository.sh` — syntax and runtime-asset sanity check.
 - `docs/README.pdf` — previous generated PDF documentation.
 
 ## How it works
